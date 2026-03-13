@@ -130,7 +130,7 @@ Route::middleware('auth:api')->group(function () {
                 ->orderBy('prenom')
                 ->get(['id', 'matricule', 'nom', 'prenom', 'email', 'service_id']);
         });
-
+        Route::get('types-connexion', fn() => \App\Models\Dico\TypeConnexion::orderBy('nom')->get());
         // Données référentielles
         Route::get('marques',                fn() => \App\Models\Dico\Marque::orderBy('nom')->get());
         Route::get('services',               fn() => \App\Models\Service::orderBy('nom')->get());

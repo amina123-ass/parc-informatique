@@ -1,4 +1,5 @@
-// components/admin-parc/ConfirmDialog.jsx
+// src/components/admin-parc/ConfirmDialog.jsx
+
 import {
   Dialog,
   DialogTitle,

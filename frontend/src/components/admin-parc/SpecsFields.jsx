@@ -1,132 +1,93 @@
 // src/components/admin-parc/SpecsFields.jsx
 
-import { useState, useEffect, useCallback } from 'react';
-import { 
-  TextField, Typography, FormControl, InputLabel, Select, MenuItem, 
-  Grid, CircularProgress, Box, Alert 
+import { useState, useEffect } from 'react';
+import {
+  Box, TextField, FormControl, InputLabel, Select, MenuItem,
+  FormControlLabel, Switch, CircularProgress, Typography,
+  InputAdornment, Alert,
 } from '@mui/material';
+import { CalendarMonth, Api } from '@mui/icons-material';
 import api from '../../api/client';
 
-export default function SpecsFields({ subCategoryId, specs, onChange, referenceData = {} }) {
-  const [attributes, setAttributes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+// Mapping data_key → endpoint API
+const API_ENDPOINTS = {
+  cartouches:              '/admin-parc/cartouches',
+  systemes_exploitation:   '/admin-parc/systemes-exploitation',
+  systemesExploitation:    '/admin-parc/systemes-exploitation',
+  marques:                 '/admin-parc/marques',
+  services:                '/admin-parc/services',
+  entites:                 '/admin-parc/entites',
+};
+
+// Mapping data_key → champs label/value par défaut
+const API_DEFAULTS = {
+  cartouches:            { labelField: 'reference', valueField: 'id' },
+  systemes_exploitation: { labelField: 'nom',       valueField: 'id' },
+  systemesExploitation:  { labelField: 'nom',       valueField: 'id' },
+  marques:               { labelField: 'nom',       valueField: 'id' },
+  services:              { labelField: 'nom',       valueField: 'id' },
+  entites:               { labelField: 'nom',       valueField: 'id' },
+};
+
+// ─── Composant pour un champ api_select ────────────────────────────────────
+function ApiSelectField({ attr, value, onChange, referenceData }) {
+  const [options, setOptions]   = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
+
+  const dataKey    = attr.data_key    || '';
+  const labelField = attr.label_field || API_DEFAULTS[dataKey]?.labelField || 'nom';
+  const valueField = attr.value_field || API_DEFAULTS[dataKey]?.valueField || 'id';
 
   useEffect(() => {
-    const fetchAttributes = async () => {
-      if (!subCategoryId) {
-        setAttributes([]);
-        setLoading(false);
-        return;
-      }
+    if (!dataKey) return;
 
-      console.log('🔍 Fetching attributes for subCategoryId:', subCategoryId);
-      setLoading(true);
-      setError('');
-      
-      try {
-        const res = await api.get(`/admin-parc/sous-categories/${subCategoryId}`);
-        console.log('✅ API Response:', res.data);
-        
-        const attrs = res.data.attributes || [];
-        console.log('📋 Attributes found:', attrs.length, attrs);
-        
-        setAttributes(attrs);
-      } catch (err) {
-        console.error('❌ Erreur chargement attributs:', err);
-        setError(err.response?.data?.message || 'Erreur lors du chargement des attributs');
-        setAttributes([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAttributes();
-  }, [subCategoryId]);
-
-  // ✅ Utiliser useCallback pour éviter les re-créations
-  const handleChange = useCallback((key, value) => {
-    console.log('📝 Spec changed:', key, '=', value);
-    onChange(prevSpecs => ({ ...prevSpecs, [key]: value }));
-  }, [onChange]);
-
-  // ✅ Mémoriser le rendu des champs
-  const renderField = useCallback((field) => {
-    // Select statique
-    if (field.type === 'select') {
-      return (
-        <FormControl fullWidth required={field.required}>
-          <InputLabel>{field.label}{field.required && ' *'}</InputLabel>
-          <Select
-            value={specs[field.key] || ''}
-            label={`${field.label}${field.required ? ' *' : ''}`}
-            onChange={(e) => handleChange(field.key, e.target.value)}
-          >
-            <MenuItem value="">—</MenuItem>
-            {field.options?.map((opt) => (
-              <MenuItem key={opt} value={opt}>{opt}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      );
+    // 1. Utiliser les données déjà chargées dans referenceData si disponibles
+    if (dataKey === 'cartouches' && referenceData?.cartouches?.length > 0) {
+      setOptions(referenceData.cartouches);
+      return;
+    }
+    if ((dataKey === 'systemes_exploitation' || dataKey === 'systemesExploitation')
+        && referenceData?.systemesExploitation?.length > 0) {
+      setOptions(referenceData.systemesExploitation);
+      return;
+    }
+    if (dataKey === 'marques' && referenceData?.marques?.length > 0) {
+      setOptions(referenceData.marques);
+      return;
     }
 
-    // Select dynamique (API)
-    if (field.type === 'api_select') {
-      const items = referenceData[field.data_key] || [];
-      const valueField = field.value_field || 'id';
-      const labelField = field.label_field || 'nom';
-
-      return (
-        <FormControl fullWidth required={field.required}>
-          <InputLabel>{field.label}{field.required && ' *'}</InputLabel>
-          <Select
-            value={specs[field.key] || ''}
-            label={`${field.label}${field.required ? ' *' : ''}`}
-            onChange={(e) => handleChange(field.key, e.target.value)}
-          >
-            <MenuItem value="">— Sélectionner —</MenuItem>
-            {items.map((item) => (
-              <MenuItem key={item.id ?? item[valueField]} value={item[valueField]}>
-                {item[labelField]}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      );
+    // 2. Sinon, appel API
+    const endpoint = API_ENDPOINTS[dataKey];
+    if (!endpoint) {
+      setError(`Endpoint inconnu pour "${dataKey}"`);
+      return;
     }
 
-    // Nombre
-    if (field.type === 'number') {
-      return (
-        <TextField
-          fullWidth
-          type="number"
-          label={field.label}
-          required={field.required}
-          value={specs[field.key] || ''}
-          onChange={(e) => handleChange(field.key, e.target.value)}
-        />
-      );
-    }
+    setLoading(true);
+    setError('');
 
-    // Texte (défaut)
+    api.get(endpoint)
+      .then((res) => setOptions(res.data || []))
+      .catch(() => setError(`Impossible de charger les données (${dataKey})`))
+      .finally(() => setLoading(false));
+  }, [dataKey, referenceData]);
+
+  if (!dataKey) {
     return (
-      <TextField
-        fullWidth
-        label={field.label}
-        required={field.required}
-        value={specs[field.key] || ''}
-        onChange={(e) => handleChange(field.key, e.target.value)}
-      />
+      <Alert severity="warning" icon={<Api />}>
+        Aucun <code>data_key</code> configuré pour cet attribut.
+      </Alert>
     );
-  }, [specs, referenceData, handleChange]);
+  }
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" p={2}>
-        <CircularProgress size={24} />
-        <Typography sx={{ ml: 2 }}>Chargement des attributs...</Typography>
+      <Box display="flex" alignItems="center" gap={1}>
+        <CircularProgress size={18} />
+        <Typography variant="body2" color="text.secondary">
+          Chargement…
+        </Typography>
       </Box>
     );
   }
@@ -135,27 +96,234 @@ export default function SpecsFields({ subCategoryId, specs, onChange, referenceD
     return <Alert severity="error">{error}</Alert>;
   }
 
-  if (attributes.length === 0) {
+  return (
+    <FormControl fullWidth size="small" required={attr.required}>
+      <InputLabel>
+        {attr.label}{attr.required ? ' *' : ''}
+      </InputLabel>
+      <Select
+        value={value ?? ''}
+        label={attr.label + (attr.required ? ' *' : '')}
+        onChange={(e) => onChange(e.target.value)}
+        startAdornment={
+          <InputAdornment position="start">
+            <Api fontSize="small" color="action" />
+          </InputAdornment>
+        }
+      >
+        <MenuItem value="">— Sélectionner —</MenuItem>
+        {options.map((opt) => (
+          <MenuItem key={opt[valueField]} value={String(opt[valueField])}>
+            {opt[labelField]}
+            {/* Afficher un détail secondaire si disponible */}
+            {opt.reference && labelField !== 'reference' && (
+              <Typography
+                component="span"
+                variant="caption"
+                color="text.secondary"
+                sx={{ ml: 1 }}
+              >
+                ({opt.reference})
+              </Typography>
+            )}
+          </MenuItem>
+        ))}
+        {options.length === 0 && (
+          <MenuItem disabled>Aucune donnée disponible</MenuItem>
+        )}
+      </Select>
+    </FormControl>
+  );
+}
+
+// ─── Composant principal ────────────────────────────────────────────────────
+export default function SpecsFields({
+  subCategoryId,
+  specs = {},
+  onChange,
+  referenceData = {},
+}) {
+  const [attributes, setAttributes]     = useState([]);
+  const [loadingAttrs, setLoadingAttrs] = useState(false);
+
+  useEffect(() => {
+    if (!subCategoryId) return;
+
+    setLoadingAttrs(true);
+    api.get(`/admin-parc/sub-categories/${subCategoryId}`)
+      .then((res) => setAttributes(res.data?.attributes || []))
+      .catch(() => setAttributes([]))
+      .finally(() => setLoadingAttrs(false));
+  }, [subCategoryId]);
+
+  const handleChange = (key, value) => {
+    onChange({ ...specs, [key]: value });
+  };
+
+  // ── Rendu de chaque champ selon son type ──────────────────────────────────
+  const renderField = (attr) => {
+    const value = specs[attr.key] ?? '';
+
+    switch (attr.type) {
+
+      // ── Texte libre ────────────────────────────────────────────────────────
+      case 'text':
+        return (
+          <TextField
+            fullWidth size="small"
+            label={attr.label + (attr.required ? ' *' : '')}
+            value={value}
+            onChange={(e) => handleChange(attr.key, e.target.value)}
+            required={attr.required}
+            placeholder={attr.unit ? `Ex: 8 ${attr.unit}` : ''}
+            InputProps={
+              attr.unit
+                ? { endAdornment: <InputAdornment position="end">{attr.unit}</InputAdornment> }
+                : undefined
+            }
+          />
+        );
+
+      // ── Nombre ─────────────────────────────────────────────────────────────
+      case 'number':
+        return (
+          <TextField
+            fullWidth size="small" type="number"
+            label={attr.label + (attr.required ? ' *' : '')}
+            value={value}
+            onChange={(e) => handleChange(attr.key, e.target.value)}
+            required={attr.required}
+            inputProps={{ min: 0, step: 'any' }}
+            InputProps={
+              attr.unit
+                ? { endAdornment: <InputAdornment position="end">{attr.unit}</InputAdornment> }
+                : undefined
+            }
+          />
+        );
+
+      // ── Date ───────────────────────────────────────────────────────────────
+      case 'date':
+        return (
+          <TextField
+            fullWidth size="small" type="date"
+            label={attr.label + (attr.required ? ' *' : '')}
+            value={value}
+            onChange={(e) => handleChange(attr.key, e.target.value)}
+            required={attr.required}
+            InputLabelProps={{ shrink: true }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <CalendarMonth fontSize="small" color="action" />
+                </InputAdornment>
+              ),
+            }}
+          />
+        );
+
+      // ── Texte long ─────────────────────────────────────────────────────────
+      case 'textarea':
+        return (
+          <TextField
+            fullWidth size="small" multiline rows={3}
+            label={attr.label + (attr.required ? ' *' : '')}
+            value={value}
+            onChange={(e) => handleChange(attr.key, e.target.value)}
+            required={attr.required}
+          />
+        );
+
+      // ── Liste statique ─────────────────────────────────────────────────────
+      case 'select':
+        return (
+          <FormControl fullWidth size="small" required={attr.required}>
+            <InputLabel>{attr.label + (attr.required ? ' *' : '')}</InputLabel>
+            <Select
+              value={value}
+              label={attr.label + (attr.required ? ' *' : '')}
+              onChange={(e) => handleChange(attr.key, e.target.value)}
+            >
+              <MenuItem value="">— Sélectionner —</MenuItem>
+              {(attr.options || []).map((opt) => (
+                <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        );
+
+      // ── Oui / Non ──────────────────────────────────────────────────────────
+      case 'boolean':
+        return (
+          <FormControlLabel
+            control={
+              <Switch
+                checked={!!value}
+                onChange={(e) => handleChange(attr.key, e.target.checked)}
+                size="small"
+              />
+            }
+            label={attr.label}
+          />
+        );
+
+      // ── ✅ Sélection API (NOUVEAU) ─────────────────────────────────────────
+      case 'api_select':
+        return (
+          <ApiSelectField
+            attr={attr}
+            value={value}
+            onChange={(val) => handleChange(attr.key, val)}
+            referenceData={referenceData}
+          />
+        );
+
+      // ── Fallback ───────────────────────────────────────────────────────────
+      default:
+        return (
+          <TextField
+            fullWidth size="small"
+            label={attr.label}
+            value={value}
+            onChange={(e) => handleChange(attr.key, e.target.value)}
+          />
+        );
+    }
+  };
+
+  // ── États de chargement ───────────────────────────────────────────────────
+  if (loadingAttrs) {
     return (
-      <Alert severity="info" sx={{ py: 2 }}>
-        Aucun attribut spécifique défini pour cette sous-catégorie.
-        <br />
-        <Typography variant="caption">
-          Vous pouvez en ajouter via "Gestion → Sous-catégories"
+      <Box display="flex" alignItems="center" gap={1} py={2}>
+        <CircularProgress size={20} />
+        <Typography variant="body2" color="text.secondary">
+          Chargement des attributs…
         </Typography>
-      </Alert>
+      </Box>
+    );
+  }
+
+  if (!attributes || attributes.length === 0) {
+    return (
+      <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+        Aucun attribut spécifique pour cette sous-catégorie.
+      </Typography>
     );
   }
 
   return (
-    <Box>
-      <Grid container spacing={2}>
-        {attributes.map((field) => (
-          <Grid item xs={12} sm={6} key={field.key}>
-            {renderField(field)}
-          </Grid>
-        ))}
-      </Grid>
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+        gap: 2,
+      }}
+    >
+      {attributes.map((attr) => (
+        <Box key={attr.key}>
+          {renderField(attr)}
+        </Box>
+      ))}
     </Box>
   );
 }

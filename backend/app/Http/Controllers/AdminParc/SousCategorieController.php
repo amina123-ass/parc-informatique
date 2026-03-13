@@ -13,6 +13,11 @@ use Illuminate\Support\Facades\{DB, Validator};
 class SousCategorieController extends Controller
 {
     /**
+     * Types de champs valides — synchronisés avec FIELD_TYPES du frontend
+     */
+    const VALID_FIELD_TYPES = 'text,number,date,select,boolean,textarea,api_select';
+
+    /**
      * Liste des sous-catégories avec leurs attributs
      */
     public function index(Request $request): JsonResponse
@@ -47,18 +52,18 @@ class SousCategorieController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'category_id' => 'required|exists:categories,id',
-            'nom' => 'required|string|max:255|unique:sous_categories,nom',
-            'trie' => 'nullable|integer',
-            'attributes' => 'nullable|array',
-            'attributes.*.key' => 'required|string|max:255',
-            'attributes.*.label' => 'required|string|max:255',
-            'attributes.*.type' => 'required|in:text,number,select,api_select',
-            'attributes.*.options' => 'nullable|array',
-            'attributes.*.data_key' => 'nullable|string',
+            'category_id'              => 'required|exists:categories,id',
+            'nom'                      => 'required|string|max:255|unique:sous_categories,nom',
+            'trie'                     => 'nullable|integer',
+            'attributes'               => 'nullable|array',
+            'attributes.*.key'         => 'required|string|max:255',
+            'attributes.*.label'       => 'required|string|max:255',
+            'attributes.*.type'        => 'required|in:' . self::VALID_FIELD_TYPES,
+            'attributes.*.options'     => 'nullable|array',
+            'attributes.*.data_key'    => 'nullable|string',
             'attributes.*.label_field' => 'nullable|string',
             'attributes.*.value_field' => 'nullable|string',
-            'attributes.*.required' => 'nullable|boolean',
+            'attributes.*.required'    => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -74,8 +79,8 @@ class SousCategorieController extends Controller
             // Créer la sous-catégorie
             $sousCategorie = SousCategorie::create([
                 'category_id' => $validated['category_id'],
-                'nom' => $validated['nom'],
-                'trie' => $validated['trie'] ?? 0,
+                'nom'         => $validated['nom'],
+                'trie'        => $validated['trie'] ?? 0,
             ]);
 
             // Ajouter les attributs
@@ -83,15 +88,15 @@ class SousCategorieController extends Controller
                 foreach ($validated['attributes'] as $index => $attr) {
                     SousCategorieAttribute::create([
                         'sous_category_id' => $sousCategorie->id,
-                        'key' => $attr['key'],
-                        'label' => $attr['label'],
-                        'type' => $attr['type'],
-                        'options' => $attr['options'] ?? null,
-                        'data_key' => $attr['data_key'] ?? null,
-                        'label_field' => $attr['label_field'] ?? null,
-                        'value_field' => $attr['value_field'] ?? null,
-                        'ordre' => $index,
-                        'required' => $attr['required'] ?? false,
+                        'key'              => $attr['key'],
+                        'label'            => $attr['label'],
+                        'type'             => $attr['type'],
+                        'options'          => $attr['options'] ?? null,
+                        'data_key'         => $attr['data_key'] ?? null,
+                        'label_field'      => $attr['label_field'] ?? null,
+                        'value_field'      => $attr['value_field'] ?? null,
+                        'ordre'            => $index,
+                        'required'         => $attr['required'] ?? false,
                     ]);
                 }
             }
@@ -117,17 +122,17 @@ class SousCategorieController extends Controller
         $sousCategorie = SousCategorie::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
-            'nom' => 'sometimes|string|max:255|unique:sous_categories,nom,' . $id,
-            'trie' => 'nullable|integer',
-            'attributes' => 'nullable|array',
-            'attributes.*.key' => 'required|string|max:255',
-            'attributes.*.label' => 'required|string|max:255',
-            'attributes.*.type' => 'required|in:text,number,select,api_select',
-            'attributes.*.options' => 'nullable|array',
-            'attributes.*.data_key' => 'nullable|string',
+            'nom'                      => 'sometimes|string|max:255|unique:sous_categories,nom,' . $id,
+            'trie'                     => 'nullable|integer',
+            'attributes'               => 'nullable|array',
+            'attributes.*.key'         => 'required|string|max:255',
+            'attributes.*.label'       => 'required|string|max:255',
+            'attributes.*.type'        => 'required|in:' . self::VALID_FIELD_TYPES,
+            'attributes.*.options'     => 'nullable|array',
+            'attributes.*.data_key'    => 'nullable|string',
             'attributes.*.label_field' => 'nullable|string',
             'attributes.*.value_field' => 'nullable|string',
-            'attributes.*.required' => 'nullable|boolean',
+            'attributes.*.required'    => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -161,15 +166,15 @@ class SousCategorieController extends Controller
                     foreach ($validated['attributes'] as $index => $attr) {
                         SousCategorieAttribute::create([
                             'sous_category_id' => $sousCategorie->id,
-                            'key' => $attr['key'],
-                            'label' => $attr['label'],
-                            'type' => $attr['type'],
-                            'options' => $attr['options'] ?? null,
-                            'data_key' => $attr['data_key'] ?? null,
-                            'label_field' => $attr['label_field'] ?? null,
-                            'value_field' => $attr['value_field'] ?? null,
-                            'ordre' => $index,
-                            'required' => $attr['required'] ?? false,
+                            'key'              => $attr['key'],
+                            'label'            => $attr['label'],
+                            'type'             => $attr['type'],
+                            'options'          => $attr['options'] ?? null,
+                            'data_key'         => $attr['data_key'] ?? null,
+                            'label_field'      => $attr['label_field'] ?? null,
+                            'value_field'      => $attr['value_field'] ?? null,
+                            'ordre'            => $index,
+                            'required'         => $attr['required'] ?? false,
                         ]);
                     }
                 }
@@ -200,7 +205,7 @@ class SousCategorieController extends Controller
         }
 
         AuditService::log('DELETE_SOUS_CATEGORIE', 'SousCategorie', $sousCategorie->id, $sousCategorie->toArray());
-        
+
         $sousCategorie->attributes()->delete();
         $sousCategorie->delete();
 

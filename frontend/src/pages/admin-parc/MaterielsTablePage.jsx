@@ -23,21 +23,22 @@ import ConfirmDialog from '../../components/admin-parc/ConfirmDialog';
 
 const ETAT_COLORS = {
   EN_STOCK: 'success',
-  AFFECTE: 'primary',
-  PANNE: 'warning',
-  REFORME: 'error',
+  AFFECTE:  'primary',
+  PANNE:    'warning',
+  REFORME:  'error',
 };
 
 const ETAT_LABELS = {
   EN_STOCK: 'En stock',
-  AFFECTE: 'Affecté',
-  PANNE: 'En panne',
-  REFORME: 'Réformé',
+  AFFECTE:  'Affecté',
+  PANNE:    'En panne',
+  REFORME:  'Réformé',
 };
 
 export default function MaterielsTablePage() {
   const { categoryId, subCategoryId } = useParams();
   const navigate = useNavigate();
+
   const [subCat, setSubCat] = useState(null);
   const [materiels, setMateriels] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -62,9 +63,9 @@ export default function MaterielsTablePage() {
       const res = await api.get('/admin-parc/materiels', {
         params: {
           sous_category_id: subCategoryId,
-          page: paginationModel.page + 1,
-          per_page: paginationModel.pageSize,
-          search: search || undefined,
+          page:             paginationModel.page + 1,
+          per_page:         paginationModel.pageSize,
+          search:           search || undefined,
         },
       });
       setMateriels(res.data.data || []);
@@ -79,13 +80,8 @@ export default function MaterielsTablePage() {
     }
   }, [subCategoryId, paginationModel, search]);
 
-  useEffect(() => {
-    fetchSubCat();
-  }, [fetchSubCat]);
-
-  useEffect(() => {
-    fetchMateriels();
-  }, [fetchMateriels]);
+  useEffect(() => { fetchSubCat(); }, [fetchSubCat]);
+  useEffect(() => { fetchMateriels(); }, [fetchMateriels]);
 
   const handleReforme = async () => {
     try {
@@ -112,14 +108,36 @@ export default function MaterielsTablePage() {
   };
 
   const columns = [
-    { field: 'model', headerName: 'Modèle', flex: 1, minWidth: 180 },
+    {
+      field: 'model',
+      headerName: 'Modèle',
+      flex: 1,
+      minWidth: 160,
+    },
+    {
+      field: 'numero_serie',             // ✅ Numéro de série
+      headerName: 'N° Série',
+      width: 150,
+      renderCell: (p) => (
+        <Typography
+          variant="body2"
+          sx={{ fontFamily: 'monospace', fontSize: 12 }}
+        >
+          {p.value || '—'}
+        </Typography>
+      ),
+    },
     {
       field: 'marque',
       headerName: 'Marque',
       width: 120,
       renderCell: (p) => p.row.marque?.nom || '—',
     },
-    { field: 'date_achat', headerName: 'Date achat', width: 120 },
+    {
+      field: 'date_achat',
+      headerName: 'Date achat',
+      width: 120,
+    },
     {
       field: 'prix_unitaire',
       headerName: 'Prix (DH)',
@@ -214,18 +232,14 @@ export default function MaterielsTablePage() {
       {/* Breadcrumbs */}
       <Breadcrumbs sx={{ mb: 2 }}>
         <Link
-          underline="hover"
-          color="inherit"
-          sx={{ cursor: 'pointer' }}
+          underline="hover" color="inherit" sx={{ cursor: 'pointer' }}
           onClick={() => navigate('/admin-parc/dashboard')}
         >
           Tableau de bord
         </Link>
         {subCat?.categorie && (
           <Link
-            underline="hover"
-            color="inherit"
-            sx={{ cursor: 'pointer' }}
+            underline="hover" color="inherit" sx={{ cursor: 'pointer' }}
             onClick={() => navigate(`/admin-parc/categories/${subCat.categorie.id}`)}
           >
             {subCat.categorie.nom}
@@ -236,17 +250,8 @@ export default function MaterielsTablePage() {
         </Typography>
       </Breadcrumbs>
 
-      {/* Header avec titre et actions */}
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 3,
-          flexWrap: 'wrap',
-          gap: 2,
-        }}
-      >
+      {/* Header */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <Box>
           <Typography variant="h4">{subCat?.nom || 'Chargement...'}</Typography>
           {subCat?.materiels_count !== undefined && (
@@ -259,7 +264,7 @@ export default function MaterielsTablePage() {
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
             size="small"
-            placeholder="Rechercher..."
+            placeholder="Modèle, N° série, marque..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             InputProps={{
@@ -269,14 +274,12 @@ export default function MaterielsTablePage() {
                 </InputAdornment>
               ),
             }}
-            sx={{ width: 250 }}
+            sx={{ width: 260 }}
           />
           <Button
             variant="contained"
             startIcon={<Add />}
-            onClick={() =>
-              navigate(`/admin-parc/sub-categories/${subCategoryId}/materiels/new`)
-            }
+            onClick={() => navigate(`/admin-parc/sub-categories/${subCategoryId}/materiels/new`)}
           >
             Nouveau matériel
           </Button>
@@ -335,3 +338,5 @@ export default function MaterielsTablePage() {
     </Box>
   );
 }
+
+

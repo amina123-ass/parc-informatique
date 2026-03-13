@@ -71,18 +71,27 @@ export default function SousCategorieDialog({ open, categoryId, editId, onClose,
 
   const handleSubmit = async () => {
     setError('');
-    
-    // Validation
+
     if (!form.category_id || !form.nom) {
       setError('Veuillez remplir tous les champs obligatoires.');
       setActiveStep(0);
       return;
     }
 
-    // Vérifier que tous les attributs ont un libellé
+    // Vérifier que tous les attributs ont un libellé et une clé
     const invalidAttrs = attributes.filter((a) => !a.label || !a.key);
     if (invalidAttrs.length > 0) {
       setError('Tous les attributs doivent avoir un nom.');
+      setActiveStep(1);
+      return;
+    }
+
+    // Vérifier que les attributs de type "select" ont au moins une option
+    const emptySelectAttrs = attributes.filter(
+      (a) => a.type === 'select' && (!a.options || a.options.length === 0)
+    );
+    if (emptySelectAttrs.length > 0) {
+      setError('Les attributs de type "Liste déroulante" doivent avoir au moins une option.');
       setActiveStep(1);
       return;
     }
@@ -145,7 +154,7 @@ export default function SousCategorieDialog({ open, categoryId, editId, onClose,
           ))}
         </Stepper>
 
-        {/* ÉTAPE 1: Informations de base */}
+        {/* ÉTAPE 1 : Informations de base */}
         {activeStep === 0 && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Alert severity="info" icon={<Category />}>
@@ -190,7 +199,7 @@ export default function SousCategorieDialog({ open, categoryId, editId, onClose,
           </Box>
         )}
 
-        {/* ÉTAPE 2: Attributs spécifiques */}
+        {/* ÉTAPE 2 : Attributs spécifiques */}
         {activeStep === 1 && (
           <Box>
             <AttributeFieldsBuilder
@@ -203,11 +212,11 @@ export default function SousCategorieDialog({ open, categoryId, editId, onClose,
 
       <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
         <Button onClick={handleClose}>Annuler</Button>
-        
+
         {activeStep > 0 && (
           <Button onClick={handleBack}>Retour</Button>
         )}
-        
+
         {activeStep < steps.length - 1 ? (
           <Button variant="contained" onClick={handleNext}>
             Suivant
@@ -221,3 +230,4 @@ export default function SousCategorieDialog({ open, categoryId, editId, onClose,
     </Dialog>
   );
 }
+

@@ -43,6 +43,7 @@ class MaterielController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('model', 'like', "%{$search}%")
+                  ->orWhere('numero_serie', 'like', "%{$search}%")  // ✅ recherche par N° série
                   ->orWhereHas('marque', fn($mq) => $mq->where('nom', 'like', "%{$search}%"))
                   ->orWhereHas('affectationActive.user', function ($uq) use ($search) {
                       $uq->where('nom', 'like', "%{$search}%")

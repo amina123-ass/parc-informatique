@@ -37,6 +37,7 @@ class StoreMaterielRequest extends FormRequest
     {
         return [
             'model' => 'required|string|max:255',
+            'numero_serie'     => 'nullable|string|max:255|unique:materiels,numero_serie',
             'marque_id' => 'nullable|exists:marques,id',
             'category_id' => 'required|exists:categories,id',
             'sous_category_id' => 'required|exists:sous_categories,id',
@@ -68,6 +69,7 @@ class StoreMaterielRequest extends FormRequest
     {
         return [
             'model.required' => 'Le modèle est obligatoire.',
+            'numero_serie.unique' => 'Ce numéro de série existe déjà.',
             'category_id.required' => 'La catégorie est obligatoire.',
             'category_id.exists' => 'La catégorie sélectionnée n\'existe pas.',
             'sous_category_id.required' => 'La sous-catégorie est obligatoire.',

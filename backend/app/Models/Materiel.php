@@ -16,16 +16,17 @@ class Materiel extends Model
 
     protected $fillable = [
         'category_id', 'sous_category_id', 'marque_id', 'model',
+        'numero_serie',                                             // ✅ Numéro de série
         'date_achat', 'garantie_fin', 'observation', 'prix_unitaire',
         'etat', 'reseau', 'date_reforme',
     ];
 
     protected $casts = [
-        'date_achat'     => 'date',
-        'garantie_fin'   => 'date',
-        'date_reforme'   => 'date',
-        'prix_unitaire'  => 'decimal:2',
-        'reseau'         => 'boolean',
+        'date_achat'    => 'date',
+        'garantie_fin'  => 'date',
+        'date_reforme'  => 'date',
+        'prix_unitaire' => 'decimal:2',
+        // ✅ 'reseau' retiré du cast boolean — c'est maintenant une string
     ];
 
     // ─── Relations ──────────────────────────────────
@@ -83,3 +84,4 @@ class Materiel extends Model
         return $this->details->pluck('value', 'key')->toArray();
     }
 }
+
