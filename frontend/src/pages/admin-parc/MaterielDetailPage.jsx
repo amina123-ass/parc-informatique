@@ -214,21 +214,7 @@ export default function MaterielDetailPage() {
                 value={`${Number(materiel.prix_unitaire).toLocaleString('fr-MA')} DH`}
               />
 
-              {/* ✅ Type de connexion réseau — insensible à la casse */}
-              <InfoRow
-                label="Type de connexion réseau"
-                value={
-                  reseauLabel ? (
-                    <Chip
-                      icon={<Wifi fontSize="small" />}
-                      label={reseauLabel}
-                      size="small"
-                      color="info"
-                      variant="outlined"
-                    />
-                  ) : '—'
-                }
-              />
+              
 
               {materiel.observation && (
                 <InfoRow label="Observation" value={materiel.observation} />
