@@ -89,13 +89,7 @@ export default function MaterielsDirecteurPage() {
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
           💼 Matériels affectés
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<DownloadIcon />}
-          onClick={handleExport}
-        >
-          Exporter
-        </Button>
+        
       </Box>
 
       {/* Filtres */}

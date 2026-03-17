@@ -213,8 +213,6 @@ export default function MaterielDetailPage() {
                 label="Prix"
                 value={`${Number(materiel.prix_unitaire).toLocaleString('fr-MA')} DH`}
               />
-
-              0
               {materiel.observation && (
                 <InfoRow label="Observation" value={materiel.observation} />
               )}

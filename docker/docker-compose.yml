@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+
+  # ─────────────────────────────────────────
+  # Base de données MySQL
+  # ─────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: parc_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: parc_informatique
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - parc_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────
+  # Backend Laravel (PHP-FPM)
+  # ─────────────────────────────────────────
+  app:
+    build:
+      context: ..
+      dockerfile: docker/php/Dockerfile
+    container_name: parc_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ../:/var/www/html
+      - ./php/php.ini:/usr/local/etc/php/conf.d/custom.ini
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - parc_network
+    environment:
+      - PHP_OPCACHE_ENABLE=1
+
+  # ─────────────────────────────────────────
+  # Nginx – Backend (exposé sur 8002)
+  # ─────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: parc_nginx
+    restart: unless-stopped
+    ports:
+      - "8002:80"
+    volumes:
+      - ../:/var/www/html
+      - ./nginx/backend.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+    networks:
+      - parc_network
+
+  # ─────────────────────────────────────────
+  # Frontend React (Vite build + Nginx)
+  # ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../docker/frontend/Dockerfile
+      args:
+        VITE_API_URL: http://192.168.1.45:8002/api
+        VITE_APP_NAME: "Parc Informatique"
+    container_name: parc_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - nginx
+    networks:
+      - parc_network
+
+  # ─────────────────────────────────────────
+  # Worker Laravel Queue
+  # ─────────────────────────────────────────
+  queue:
+    build:
+      context: ..
+      dockerfile: docker/php/Dockerfile
+    container_name: parc_queue
+    restart: unless-stopped
+    working_dir: /var/www/html
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+    volumes:
+      - ../:/var/www/html
+      - ./php/php.ini:/usr/local/etc/php/conf.d/custom.ini
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - parc_network
+
+volumes:
+  db_data:
+    driver: local
+
+networks:
+  parc_network:
+    driver: bridge
