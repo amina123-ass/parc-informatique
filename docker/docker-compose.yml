@@ -12,16 +12,19 @@ services:
     environment:
       MYSQL_DATABASE: parc_informatique
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_USER: parc_user
+      MYSQL_PASSWORD: parc_password
+      MYSQL_ALLOW_EMPTY_PASSWORD: "no"
     volumes:
       - db_data:/var/lib/mysql
     networks:
       - parc_network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
   # ─────────────────────────────────────────
   # Backend Laravel (PHP-FPM)
@@ -63,11 +66,13 @@ services:
 
   # ─────────────────────────────────────────
   # Frontend React (Vite build + Nginx)
+  # context = racine du projet pour accéder
+  # à docker/frontend/nginx.conf
   # ─────────────────────────────────────────
   frontend:
     build:
-      context: ../frontend
-      dockerfile: ../docker/frontend/Dockerfile
+      context: ..
+      dockerfile: docker/frontend/Dockerfile
       args:
         VITE_API_URL: http://192.168.1.45:8002/api
         VITE_APP_NAME: "Parc Informatique"
@@ -97,6 +102,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      app:
+        condition: service_started
     networks:
       - parc_network
 
