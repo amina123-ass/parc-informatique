@@ -1,5 +1,6 @@
 # ──────────────────────────────────────────────────────────
 # Dockerfile – Laravel Backend (PHP 8.2 FPM)
+# Build context : racine du projet
 # ──────────────────────────────────────────────────────────
 FROM php:8.2-fpm
 
@@ -42,8 +43,8 @@ RUN mkdir -p /home/$user/.composer && chown -R $user:$user /home/$user
 # Répertoire de travail
 WORKDIR /var/www/html
 
-# Copier les fichiers du projet
-COPY . .
+# Copier les fichiers du projet (sans frontend/)
+COPY --chown=$user:www-data . .
 
 # Installer les dépendances PHP
 RUN composer install --no-dev --optimize-autoloader --no-interaction
@@ -52,11 +53,6 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 RUN chown -R $user:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage \
     && chmod -R 755 /var/www/html/bootstrap/cache
-
-# Optimisation Laravel pour la production
-RUN php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache
 
 USER $user
 
