@@ -1,23 +1,50 @@
-/.phpunit.cache
-/node_modules
-/public/build
-/public/hot
-/public/storage
-/storage/*.key
-/storage/pail
-/vendor
-.env
+# ─────────────────────────────────────────────────
+# .dockerignore – racine du projet
+# parc-informatique/.dockerignore
+# ─────────────────────────────────────────────────
+
+# Dépendances backend (réinstallées par composer dans le build)
+vendor/
+
+# Dépendances et build frontend
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+node_modules/
+
+# Git
+.git/
+.gitignore
+
+# Environnement
 .env.backup
 .env.production
-.phpactor.json
-.phpunit.result.cache
-Homestead.json
-Homestead.yaml
+.env.local
+
+# Logs
 npm-debug.log
 yarn-error.log
-/auth.json
-/.fleet
-/.idea
-/.nova
-/.vscode
-/.zed
+storage/logs/*.log
+*.log
+
+# Cache Laravel (recréé dans le build)
+bootstrap/cache/*.php
+.phpunit.cache
+.phpunit.result.cache
+/.phpactor.json
+
+# IDE
+.fleet/
+.idea/
+.nova/
+.vscode/
+.zed/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# CI / Auth
+auth.json
+Homestead.json
+Homestead.yaml
