@@ -27,13 +27,7 @@ const KPI_CONFIG = [
 function UserAvatar({ nom, prenom }) {
   const initials = `${(prenom?.[0] ?? '').toUpperCase()}${(nom?.[0] ?? '').toUpperCase()}`;
   return (
-    <Avatar
-      sx={{
-        width: 34, height: 34,
-        fontSize: 12, fontWeight: 700,
-        bgcolor: '#1565c018', color: '#1565c0',
-      }}
-    >
+    <Avatar sx={{ width: 34, height: 34, fontSize: 12, fontWeight: 700, bgcolor: '#1565c018', color: '#1565c0' }}>
       {initials}
     </Avatar>
   );
@@ -43,7 +37,7 @@ function UserAvatar({ nom, prenom }) {
 function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
   const [roleId,    setRoleId]    = useState('');
   const [serviceId, setServiceId] = useState('');
-  const [step,      setStep]      = useState('form'); // 'form' | 'loading' | 'success'
+  const [step,      setStep]      = useState('form');
   const [error,     setError]     = useState('');
 
   useEffect(() => {
@@ -63,7 +57,6 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
     setStep('loading');
     setError('');
     try {
-      // ✅ URLs corrigées selon routes/api.php
       if (String(roleId) !== String(user.role_id)) {
         await api.patch(`/admin/users/${user.id}/role`, { role_id: roleId });
       }
@@ -71,12 +64,8 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
         await api.patch(`/admin/users/${user.id}/service`, { service_id: serviceId });
       }
       await api.patch(`/admin/users/${user.id}/activation`, { account_active: true });
-
       setStep('success');
-      setTimeout(() => {
-        onSuccess();
-        onClose();
-      }, 1200);
+      setTimeout(() => { onSuccess(); onClose(); }, 1200);
     } catch (err) {
       setError(err?.response?.data?.message ?? 'Erreur serveur. Réessayez.');
       setStep('form');
@@ -93,14 +82,11 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
       fullWidth
       PaperProps={{ sx: { borderRadius: 3 } }}
     >
-      {/* ── Titre ── */}
       <DialogTitle sx={{ pb: 1 }}>
         <Stack direction="row" alignItems="center" gap={1.5}>
           <PersonAdd color="primary" />
           <Box>
-            <Typography fontWeight={700} fontSize={16}>
-              Activer le compte
-            </Typography>
+            <Typography fontWeight={700} fontSize={16}>Activer le compte</Typography>
             <Typography variant="caption" color="text.secondary">
               {user.prenom} {user.nom} · {user.matricule ?? user.email}
             </Typography>
@@ -110,7 +96,6 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
 
       <Divider />
 
-      {/* ── Contenu ── */}
       <DialogContent sx={{ pt: 2.5 }}>
 
         {/* Chargement */}
@@ -137,7 +122,6 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
         {step === 'form' && (
           <Stack spacing={2.5}>
 
-            {/* Erreur */}
             {error && (
               <Alert severity="error" sx={{ borderRadius: 2, fontSize: 13 }}>
                 {error}
@@ -145,13 +129,7 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
             )}
 
             {/* Récap utilisateur */}
-            <Paper
-              variant="outlined"
-              sx={{
-                p: 1.5, borderRadius: 2,
-                bgcolor: 'grey.50', borderColor: 'grey.200',
-              }}
-            >
+            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: 'grey.50', borderColor: 'grey.200' }}>
               <Stack direction="row" alignItems="center" gap={1.5}>
                 <UserAvatar nom={user.nom} prenom={user.prenom} />
                 <Box sx={{ flexGrow: 1, minWidth: 0 }}>
@@ -172,66 +150,51 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
               </Stack>
             </Paper>
 
-            {/* Select Rôle */}
-            <FormControl fullWidth size="small" required>
+            {/* ✅ Select Rôle — utilise r.nom comme dans UsersPage */}
+            <FormControl fullWidth margin="normal">
               <InputLabel id="dlg-role-label">Rôle</InputLabel>
               <Select
                 labelId="dlg-role-label"
-                id="dlg-role-select"
                 value={roleId}
                 label="Rôle"
                 onChange={(e) => setRoleId(e.target.value)}
-                MenuProps={{
-                  PaperProps: {
-                    sx: { maxHeight: 240, borderRadius: 2, mt: 0.5 },
-                  },
-                }}
+                MenuProps={{ PaperProps: { sx: { maxHeight: 240, borderRadius: 2, mt: 0.5 } } }}
               >
                 {roles.length === 0 ? (
                   <MenuItem disabled>Aucun rôle disponible</MenuItem>
                 ) : (
                   roles.map((r) => (
                     <MenuItem key={r.id} value={r.id}>
-                      {r.name}
+                      {r.nom}  {/* ✅ nom et non name */}
                     </MenuItem>
                   ))
                 )}
               </Select>
             </FormControl>
 
-            {/* Select Service */}
-            <FormControl fullWidth size="small" required>
+            {/* ✅ Select Service — utilise s.nom comme dans UsersPage */}
+            <FormControl fullWidth margin="normal">
               <InputLabel id="dlg-service-label">Service</InputLabel>
               <Select
                 labelId="dlg-service-label"
-                id="dlg-service-select"
                 value={serviceId}
                 label="Service"
                 onChange={(e) => setServiceId(e.target.value)}
-                MenuProps={{
-                  PaperProps: {
-                    sx: { maxHeight: 240, borderRadius: 2, mt: 0.5 },
-                  },
-                }}
+                MenuProps={{ PaperProps: { sx: { maxHeight: 240, borderRadius: 2, mt: 0.5 } } }}
               >
                 {services.length === 0 ? (
                   <MenuItem disabled>Aucun service disponible</MenuItem>
                 ) : (
                   services.map((s) => (
                     <MenuItem key={s.id} value={s.id}>
-                      {s.name}
+                      {s.nom}  {/* ✅ nom et non name */}
                     </MenuItem>
                   ))
                 )}
               </Select>
             </FormControl>
 
-            {/* Info */}
-            <Alert
-              severity="info"
-              icon={<Info fontSize="small" />}
-              sx={{ borderRadius: 2, py: 0.5 }}
-            >
+            <Alert severity="info" icon={<Info fontSize="small" />} sx={{ borderRadius: 2, py: 0.5 }}>
               <Typography variant="caption">
                 Rôle et service <strong>obligatoires</strong> avant activation.
               </Typography>
@@ -241,15 +204,9 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
         )}
       </DialogContent>
 
-      {/* ── Actions ── */}
       {step === 'form' && (
         <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-          <Button
-            onClick={onClose}
-            variant="outlined"
-            color="inherit"
-            sx={{ borderRadius: 2 }}
-          >
+          <Button onClick={onClose} variant="outlined" color="inherit" sx={{ borderRadius: 2 }}>
             Annuler
           </Button>
           <Button
@@ -277,9 +234,7 @@ function PendingUsersSection({ roles, services, onActivated }) {
   const fetchPending = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get('/admin/users', {
-        params: { pending: 1, per_page: 50 },
-      });
+      const res = await api.get('/admin/users', { params: { pending: 1, per_page: 50 } });
       const raw = res.data;
       setUsers(Array.isArray(raw) ? raw : (raw?.data ?? []));
     } catch {
@@ -291,25 +246,13 @@ function PendingUsersSection({ roles, services, onActivated }) {
 
   useEffect(() => { fetchPending(); }, [fetchPending]);
 
-  const openDialog = (user) => {
-    setSelected(user);
-    setDialogOpen(true);
-  };
-
-  const handleSuccess = () => {
-    fetchPending();
-    onActivated(); // rafraîchit les KPI
-  };
+  const openDialog  = (user) => { setSelected(user); setDialogOpen(true); };
+  const handleSuccess = () => { fetchPending(); onActivated(); };
 
   return (
     <Box>
       {/* En-tête */}
-      <Stack
-        direction="row"
-        alignItems="flex-start"
-        justifyContent="space-between"
-        mb={2.5}
-      >
+      <Stack direction="row" alignItems="flex-start" justifyContent="space-between" mb={2.5}>
         <Box>
           <Typography variant="h6" fontWeight={700} fontSize={16}>
             Comptes en attente d'activation
@@ -325,24 +268,16 @@ function PendingUsersSection({ roles, services, onActivated }) {
         </Tooltip>
       </Stack>
 
-      {/* Skeletons chargement */}
+      {/* Skeletons */}
       {loading && (
         <Stack spacing={1}>
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} variant="rounded" height={52} />
-          ))}
+          {[1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" height={52} />)}
         </Stack>
       )}
 
       {/* Vide */}
       {!loading && users.length === 0 && (
-        <Paper
-          variant="outlined"
-          sx={{
-            p: 4, textAlign: 'center',
-            borderRadius: 2, borderStyle: 'dashed', borderColor: 'grey.300',
-          }}
-        >
+        <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', borderRadius: 2, borderStyle: 'dashed', borderColor: 'grey.300' }}>
           <CheckCircle sx={{ fontSize: 38, color: 'success.light', mb: 0.5 }} />
           <Typography variant="body2" color="text.secondary">
             Aucun compte en attente d'activation.
@@ -352,34 +287,23 @@ function PendingUsersSection({ roles, services, onActivated }) {
 
       {/* Tableau */}
       {!loading && users.length > 0 && (
-        <TableContainer
-          component={Paper}
-          variant="outlined"
-          sx={{ borderRadius: 2 }}
-        >
+        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: 'grey.50' }}>
                 {['Utilisateur', 'Matricule', 'Email', 'Rôle', 'Service', 'Email statut', 'Action'].map((h) => (
-                  <TableCell
-                    key={h}
-                    sx={{ fontWeight: 700, fontSize: 12, py: 1.5, color: 'text.secondary' }}
-                  >
+                  <TableCell key={h} sx={{ fontWeight: 700, fontSize: 12, py: 1.5, color: 'text.secondary' }}>
                     {h}
                   </TableCell>
                 ))}
               </TableRow>
             </TableHead>
-
             <TableBody>
               {users.map((user, idx) => (
                 <TableRow
                   key={user.id}
                   hover
-                  sx={{
-                    '&:last-child td': { border: 0 },
-                    bgcolor: idx % 2 === 0 ? 'white' : 'grey.50',
-                  }}
+                  sx={{ '&:last-child td': { border: 0 }, bgcolor: idx % 2 === 0 ? 'white' : 'grey.50' }}
                 >
                   {/* Nom */}
                   <TableCell>
@@ -393,57 +317,30 @@ function PendingUsersSection({ roles, services, onActivated }) {
 
                   {/* Matricule */}
                   <TableCell>
-                    <Typography
-                      variant="body2"
-                      sx={{ fontFamily: 'monospace', color: 'text.secondary', fontSize: 12 }}
-                    >
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'text.secondary', fontSize: 12 }}>
                       {user.matricule ?? '—'}
                     </Typography>
                   </TableCell>
 
                   {/* Email */}
                   <TableCell>
-                    <Typography variant="body2" fontSize={13}>
-                      {user.email}
-                    </Typography>
+                    <Typography variant="body2" fontSize={13}>{user.email}</Typography>
                   </TableCell>
 
-                  {/* Rôle */}
+                  {/* Rôle — ✅ utilise .nom */}
                   <TableCell>
-                    {user.role ? (
-                      <Chip
-                        label={user.role.name}
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      />
-                    ) : (
-                      <Chip
-                        label="Non attribué"
-                        size="small"
-                        variant="outlined"
-                        sx={{ color: 'warning.dark', borderColor: 'warning.main' }}
-                      />
-                    )}
+                    {user.role
+                      ? <Chip label={user.role.nom} size="small" color="primary" variant="outlined" />
+                      : <Chip label="Non attribué" size="small" variant="outlined" sx={{ color: 'warning.dark', borderColor: 'warning.main' }} />
+                    }
                   </TableCell>
 
-                  {/* Service */}
+                  {/* Service — ✅ utilise .nom */}
                   <TableCell>
-                    {user.service ? (
-                      <Chip
-                        label={user.service.name}
-                        size="small"
-                        color="secondary"
-                        variant="outlined"
-                      />
-                    ) : (
-                      <Chip
-                        label="Non attribué"
-                        size="small"
-                        variant="outlined"
-                        sx={{ color: 'warning.dark', borderColor: 'warning.main' }}
-                      />
-                    )}
+                    {user.service
+                      ? <Chip label={user.service.nom} size="small" color="secondary" variant="outlined" />
+                      : <Chip label="Non attribué" size="small" variant="outlined" sx={{ color: 'warning.dark', borderColor: 'warning.main' }} />
+                    }
                   </TableCell>
 
                   {/* Statut email */}
@@ -457,13 +354,7 @@ function PendingUsersSection({ roles, services, onActivated }) {
 
                   {/* Action */}
                   <TableCell>
-                    <Tooltip
-                      title={
-                        !user.email_verified_at
-                          ? 'Email non vérifié — activation impossible'
-                          : 'Attribuer rôle / service et activer'
-                      }
-                    >
+                    <Tooltip title={!user.email_verified_at ? 'Email non vérifié' : 'Attribuer et activer'}>
                       <span>
                         <Button
                           size="small"
@@ -472,12 +363,9 @@ function PendingUsersSection({ roles, services, onActivated }) {
                           disabled={!user.email_verified_at}
                           onClick={() => openDialog(user)}
                           sx={{
-                            fontSize: 12,
-                            px: 1.5, py: 0.5,
-                            borderRadius: 1.5,
-                            textTransform: 'none',
-                            boxShadow: 'none',
-                            '&:hover': { boxShadow: 'none' },
+                            fontSize: 12, px: 1.5, py: 0.5,
+                            borderRadius: 1.5, textTransform: 'none',
+                            boxShadow: 'none', '&:hover': { boxShadow: 'none' },
                           }}
                         >
                           Activer
@@ -492,7 +380,6 @@ function PendingUsersSection({ roles, services, onActivated }) {
         </TableContainer>
       )}
 
-      {/* Dialog */}
       <ActivationDialog
         open={dialogOpen}
         user={selected}
@@ -524,17 +411,15 @@ export default function DashboardPage() {
       api.get('/admin/dashboard'),
       api.get('/admin/roles'),
       api.get('/admin/services'),
-    ])
-      .then(([kpiRes, rolesRes, servicesRes]) => {
-        setKpi(kpiRes.data);
-        const toArr = (d) => (Array.isArray(d) ? d : (d?.data ?? []));
-        setRoles(toArr(rolesRes.data));
-        setServices(toArr(servicesRes.data));
-      })
-      .finally(() => setLoading(false));
+    ]).then(([kpiRes, rolesRes, servicesRes]) => {
+      setKpi(kpiRes.data);
+      // ✅ Même logique que UsersPage — toArr pour supporter pagination ou tableau direct
+      const toArr = (d) => (Array.isArray(d) ? d : (d?.data ?? []));
+      setRoles(toArr(rolesRes.data));
+      setServices(toArr(servicesRes.data));
+    }).finally(() => setLoading(false));
   }, []);
 
-  /* ── Squelette initial ── */
   if (loading) {
     return (
       <Box>
@@ -560,10 +445,9 @@ export default function DashboardPage() {
       {/* ── KPI Cards ── */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {KPI_CONFIG.map((item) => {
-          const Icon     = item.icon;
-          const value    = kpi?.[item.key] ?? 0;
-          const isPulse  = item.key === 'users_pending_activation' && value > 0;
-
+          const Icon    = item.icon;
+          const value   = kpi?.[item.key] ?? 0;
+          const isPulse = item.key === 'users_pending_activation' && value > 0;
           return (
             <Grid item xs={12} sm={6} md={3} key={item.key}>
               <Card
@@ -574,12 +458,7 @@ export default function DashboardPage() {
                   transition: 'border-color 0.3s',
                 }}
               >
-                <CardContent
-                  sx={{
-                    display: 'flex', alignItems: 'center', gap: 2,
-                    py: 2.5, '&:last-child': { pb: 2.5 },
-                  }}
-                >
+                <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 2.5, '&:last-child': { pb: 2.5 } }}>
                   <Box
                     sx={{
                       width: 52, height: 52, borderRadius: 2, flexShrink: 0,
@@ -589,27 +468,19 @@ export default function DashboardPage() {
                   >
                     <Icon sx={{ fontSize: 28 }} />
                   </Box>
-
                   <Box>
-                    <Typography variant="h4" fontWeight={700} lineHeight={1.1}>
-                      {value}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {item.label}
-                    </Typography>
+                    <Typography variant="h4" fontWeight={700} lineHeight={1.1}>{value}</Typography>
+                    <Typography variant="body2" color="text.secondary">{item.label}</Typography>
                   </Box>
-
-                  {/* Point clignotant si en attente */}
                   {isPulse && (
                     <Box
                       sx={{
-                        ml: 'auto',
-                        width: 10, height: 10, borderRadius: '50%',
+                        ml: 'auto', width: 10, height: 10, borderRadius: '50%',
                         bgcolor: item.color,
                         animation: 'blink 1.6s ease-in-out infinite',
                         '@keyframes blink': {
                           '0%, 100%': { opacity: 1 },
-                          '50%':      { opacity: 0.15 },
+                          '50%': { opacity: 0.15 },
                         },
                       }}
                     />
@@ -624,11 +495,7 @@ export default function DashboardPage() {
       {/* ── Section en attente ── */}
       <Card variant="outlined" sx={{ borderRadius: 3 }}>
         <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
-          <PendingUsersSection
-            roles={roles}
-            services={services}
-            onActivated={fetchKpi}
-          />
+          <PendingUsersSection roles={roles} services={services} onActivated={fetchKpi} />
         </CardContent>
       </Card>
     </Box>
