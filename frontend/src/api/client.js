@@ -2,9 +2,9 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 // ── URL de base de l'API ───────────────────────────────────
-// En développement  : http://localhost:8000/api
-// En production Docker : http://192.168.1.45:8002/api  (injecté via VITE_API_URL)
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// En développement  : http://localhost:8003/api
+// En production Docker : injecté via VITE_API_URL dans .env
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8003/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -12,7 +12,9 @@ const api = axios.create({
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
-  withCredentials: true,
+  // ⚠️ withCredentials seulement si tu utilises des cookies de session.
+  // Avec JWT Bearer token, ce n'est pas nécessaire et peut causer des erreurs CORS.
+  withCredentials: false,
 });
 
 // ── File d'attente pour les requêtes pendant le refresh ───
@@ -20,29 +22,33 @@ let isRefreshing = false;
 let failedQueue  = [];
 
 const processQueue = (error, token = null) => {
-  failedQueue.forEach(prom => {
+  failedQueue.forEach((prom) => {
     error ? prom.reject(error) : prom.resolve(token);
   });
   failedQueue = [];
 };
 
-// ── Intercepteur requête : attacher le token ───────────────
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// ── Intercepteur requête : attacher le token Bearer ───────
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-// ── Intercepteur réponse : gérer les 401 ──────────────────
+// ── Intercepteur réponse : gérer les 401 + erreurs HTTP ───
 api.interceptors.response.use(
   (response) => response,
+
   async (error) => {
     const originalRequest = error.config;
 
-    // Éviter la boucle infinie sur la route refresh
-    if (error.config?.url === '/auth/refresh') {
+    // ── Éviter la boucle infinie sur /auth/refresh ────────
+    if (originalRequest?.url?.includes('/auth/refresh')) {
       isRefreshing = false;
       processQueue(error, null);
       localStorage.removeItem('access_token');
@@ -51,18 +57,17 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Tentative de refresh du token sur 401
+    // ── Refresh automatique sur 401 ───────────────────────
     if (error.response?.status === 401 && !originalRequest._retry) {
-
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
-          .then(token => {
+          .then((token) => {
             originalRequest.headers.Authorization = `Bearer ${token}`;
             return api(originalRequest);
           })
-          .catch(err => Promise.reject(err));
+          .catch((err) => Promise.reject(err));
       }
 
       originalRequest._retry = true;
@@ -73,8 +78,8 @@ api.interceptors.response.use(
         const newToken = res.data.access_token;
 
         localStorage.setItem('access_token', newToken);
-        originalRequest.headers.Authorization          = `Bearer ${newToken}`;
-        api.defaults.headers.common['Authorization']   = `Bearer ${newToken}`;
+        api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+        originalRequest.headers.Authorization        = `Bearer ${newToken}`;
 
         processQueue(null, newToken);
         isRefreshing = false;
@@ -96,31 +101,40 @@ api.interceptors.response.use(
       }
     }
 
-    // ── Gestion des autres erreurs HTTP ───────────────────
-    switch (error.response?.status) {
+    // ── Gestion des erreurs HTTP ───────────────────────────
+    const status  = error.response?.status;
+    const data    = error.response?.data;
+
+    switch (status) {
       case 422: {
-        const errors = error.response.data?.errors;
+        // Affiche la première erreur de validation
+        const errors = data?.errors;
         if (errors) {
-          const first = Object.values(errors)[0];
-          toast.error(Array.isArray(first) ? first[0] : first);
-        } else if (error.response.data?.message) {
-          toast.error(error.response.data.message);
+          const firstField = Object.values(errors)[0];
+          toast.error(Array.isArray(firstField) ? firstField[0] : firstField);
+        } else if (data?.message) {
+          toast.error(data.message);
         }
         break;
       }
+
       case 403:
-        toast.error(error.response.data?.message || 'Accès interdit.');
+        toast.error(data?.message || 'Accès interdit.');
         break;
+
       case 404:
-        toast.error(error.response.data?.message || 'Ressource introuvable.');
+        toast.error(data?.message || 'Ressource introuvable.');
         break;
+
       case 429:
-        toast.error('Trop de tentatives. Veuillez patienter.');
+        toast.error(data?.message || 'Trop de tentatives. Veuillez patienter.');
         break;
+
       default:
-        if (error.response?.status >= 500) {
+        if (status >= 500) {
           toast.error('Erreur serveur. Réessayez plus tard.');
         }
+        break;
     }
 
     return Promise.reject(error);
