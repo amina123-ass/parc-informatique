@@ -405,7 +405,7 @@ const AdminParcLayout = () => {
               <InventoryIcon fontSize="small" />
             </Avatar>
             <Typography variant="h6" sx={{ color: '#1976d2', fontWeight: 'bold' }}>
-              Parc Matériel
+              E-Matériel
             </Typography>
           </Box>
         )}
