@@ -7,41 +7,39 @@ import {
   Paper, Chip, IconButton, Tooltip, Dialog, DialogTitle,
   DialogContent, DialogActions, Button, MenuItem, Select,
   FormControl, InputLabel, Alert, Avatar, Divider, Skeleton,
-  Stack, LinearProgress,
+  Stack,
 } from '@mui/material';
 import {
   People, HourglassBottom, Security, Business,
-  CheckCircle, Cancel, PersonAdd, Refresh, Info,
-  AssignmentInd, MiscellaneousServices,
+  CheckCircle, Refresh, PersonAdd, Info,
 } from '@mui/icons-material';
 import api from '../../api/client';
 
 /* ─── KPI Config ─────────────────────────────────────────────── */
 const KPI_CONFIG = [
-  { key: 'users_total',              label: 'Utilisateurs',  icon: People,           color: '#1565c0' },
-  { key: 'users_pending_activation', label: 'En attente',    icon: HourglassBottom,  color: '#e65100' },
-  { key: 'roles_total',              label: 'Rôles',         icon: Security,         color: '#2e7d32' },
-  { key: 'services_total',           label: 'Services',      icon: Business,         color: '#6a1b9a' },
+  { key: 'users_total',              label: 'Utilisateurs', icon: People,          color: '#1565c0' },
+  { key: 'users_pending_activation', label: 'En attente',   icon: HourglassBottom, color: '#e65100' },
+  { key: 'roles_total',              label: 'Rôles',        icon: Security,        color: '#2e7d32' },
+  { key: 'services_total',           label: 'Services',     icon: Business,        color: '#6a1b9a' },
 ];
 
-/* ─── Initials Avatar ─────────────────────────────────────────── */
+/* ─── Avatar initiales ───────────────────────────────────────── */
 function UserAvatar({ nom, prenom }) {
   const initials = `${(prenom?.[0] ?? '').toUpperCase()}${(nom?.[0] ?? '').toUpperCase()}`;
   return (
-    <Avatar sx={{ width: 34, height: 34, fontSize: 13, fontWeight: 700, bgcolor: '#1565c020', color: '#1565c0' }}>
+    <Avatar sx={{ width: 34, height: 34, fontSize: 12, fontWeight: 700, bgcolor: '#1565c020', color: '#1565c0' }}>
       {initials}
     </Avatar>
   );
 }
 
-/* ─── Activation Dialog ───────────────────────────────────────── */
+/* ─── Dialog Activation ──────────────────────────────────────── */
 function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
-  const [roleId,     setRoleId]     = useState('');
-  const [serviceId,  setServiceId]  = useState('');
-  const [step,       setStep]       = useState('form'); // 'form' | 'loading' | 'success' | 'error'
-  const [error,      setError]      = useState('');
+  const [roleId,    setRoleId]    = useState('');
+  const [serviceId, setServiceId] = useState('');
+  const [step,      setStep]      = useState('form'); // 'form' | 'loading' | 'success'
+  const [error,     setError]     = useState('');
 
-  // Pré-remplir si déjà attribués
   useEffect(() => {
     if (user) {
       setRoleId(user.role_id ?? '');
@@ -59,23 +57,15 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
     setStep('loading');
     setError('');
     try {
-      // 1. Assigner rôle (si changé)
-      if (roleId !== user.role_id) {
-        await api.post(`/admin/users/${user.id}/assign-role`, { role_id: roleId });
-      }
-      // 2. Assigner service (si changé)
-      if (serviceId !== user.service_id) {
-        await api.post(`/admin/users/${user.id}/assign-service`, { service_id: serviceId });
-      }
-      // 3. Activer
-      await api.patch(`/admin/users/${user.id}/activation`, { account_active: true });
+      // ⚠️ Adapter les URLs selon tes routes Laravel (voir routes/api.php)
+      await api.patch(`/admin/users/${user.id}/assign-role`,    { role_id: roleId });
+      await api.patch(`/admin/users/${user.id}/assign-service`, { service_id: serviceId });
+      await api.patch(`/admin/users/${user.id}/activation`,     { account_active: true });
+
       setStep('success');
-      setTimeout(() => {
-        onSuccess();
-        onClose();
-      }, 1200);
+      setTimeout(() => { onSuccess(); onClose(); }, 1200);
     } catch (err) {
-      setError(err?.response?.data?.message ?? 'Une erreur est survenue.');
+      setError(err?.response?.data?.message ?? 'Erreur serveur. Vérifiez vos routes Laravel.');
       setStep('form');
     }
   };
@@ -83,16 +73,20 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
   if (!user) return null;
 
   return (
-    <Dialog open={open} onClose={step === 'loading' ? undefined : onClose} maxWidth="xs" fullWidth
-      PaperProps={{ sx: { borderRadius: 3 } }}>
-
+    <Dialog
+      open={open}
+      onClose={step === 'loading' ? undefined : onClose}
+      maxWidth="xs"
+      fullWidth
+      PaperProps={{ sx: { borderRadius: 3 } }}
+    >
       <DialogTitle sx={{ pb: 1 }}>
         <Stack direction="row" alignItems="center" gap={1.5}>
           <PersonAdd color="primary" />
           <Box>
-            <Typography fontWeight={700}>Activer le compte</Typography>
+            <Typography fontWeight={700} fontSize={16}>Activer le compte</Typography>
             <Typography variant="caption" color="text.secondary">
-              {user.prenom} {user.nom} — {user.matricule}
+              {user.prenom} {user.nom} · {user.matricule ?? user.email}
             </Typography>
           </Box>
         </Stack>
@@ -101,85 +95,117 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
       <Divider />
 
       <DialogContent sx={{ pt: 2.5 }}>
+
+        {/* ── Chargement ── */}
         {step === 'loading' && (
-          <Box sx={{ py: 3, textAlign: 'center' }}>
-            <CircularProgress size={40} />
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+          <Box sx={{ py: 4, textAlign: 'center' }}>
+            <CircularProgress size={44} />
+            <Typography variant="body2" color="text.secondary" mt={2}>
               Activation en cours…
             </Typography>
           </Box>
         )}
 
+        {/* ── Succès ── */}
         {step === 'success' && (
-          <Box sx={{ py: 3, textAlign: 'center' }}>
-            <CheckCircle sx={{ fontSize: 48, color: 'success.main' }} />
-            <Typography fontWeight={600} sx={{ mt: 1 }}>Compte activé avec succès !</Typography>
+          <Box sx={{ py: 4, textAlign: 'center' }}>
+            <CheckCircle sx={{ fontSize: 52, color: 'success.main' }} />
+            <Typography fontWeight={700} mt={1}>Compte activé !</Typography>
           </Box>
         )}
 
+        {/* ── Formulaire ── */}
         {step === 'form' && (
           <Stack spacing={2.5}>
-            {error && <Alert severity="error" sx={{ borderRadius: 2 }}>{error}</Alert>}
+            {error && (
+              <Alert severity="error" sx={{ borderRadius: 2, fontSize: 13 }}>
+                {error}
+              </Alert>
+            )}
 
-            {/* Infos utilisateur */}
-            <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: 'grey.50' }}>
+            {/* Récapitulatif utilisateur */}
+            <Paper
+              variant="outlined"
+              sx={{ p: 1.5, borderRadius: 2, bgcolor: 'grey.50', borderColor: 'grey.200' }}
+            >
               <Stack direction="row" alignItems="center" gap={1.5}>
                 <UserAvatar nom={user.nom} prenom={user.prenom} />
-                <Box>
-                  <Typography variant="body2" fontWeight={600}>{user.prenom} {user.nom}</Typography>
-                  <Typography variant="caption" color="text.secondary">{user.email}</Typography>
+                <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                  <Typography variant="body2" fontWeight={600} noWrap>
+                    {user.prenom} {user.nom}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" noWrap>
+                    {user.email}
+                  </Typography>
                 </Box>
-                <Box sx={{ ml: 'auto' }}>
-                  <Chip
-                    label={user.email_verified_at ? 'Email vérifié' : 'Email non vérifié'}
-                    size="small"
-                    color={user.email_verified_at ? 'success' : 'warning'}
-                    variant="outlined"
-                  />
-                </Box>
+                <Chip
+                  label={user.email_verified_at ? 'Email vérifié' : 'Non vérifié'}
+                  size="small"
+                  color={user.email_verified_at ? 'success' : 'warning'}
+                  variant="outlined"
+                  sx={{ flexShrink: 0 }}
+                />
               </Stack>
             </Paper>
 
-            {/* Sélection Rôle */}
+            {/* ── Select Rôle ── */}
             <FormControl fullWidth size="small" required>
-              <InputLabel>
-                <Stack direction="row" alignItems="center" gap={0.5}>
-                  <AssignmentInd sx={{ fontSize: 16 }} /> Rôle
-                </Stack>
-              </InputLabel>
+              <InputLabel id="role-label">Rôle</InputLabel>
               <Select
+                labelId="role-label"
+                id="role-select"
                 value={roleId}
-                onChange={(e) => setRoleId(e.target.value)}
                 label="Rôle"
+                onChange={(e) => setRoleId(e.target.value)}
+                MenuProps={{
+                  PaperProps: {
+                    sx: { maxHeight: 240, borderRadius: 2, mt: 0.5 },
+                  },
+                }}
               >
-                <MenuItem value="" disabled><em>Sélectionner un rôle</em></MenuItem>
-                {roles.map((r) => (
-                  <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>
-                ))}
+                {roles.length === 0 ? (
+                  <MenuItem disabled>Aucun rôle disponible</MenuItem>
+                ) : (
+                  roles.map((r) => (
+                    <MenuItem key={r.id} value={r.id}>
+                      {r.name}
+                    </MenuItem>
+                  ))
+                )}
               </Select>
             </FormControl>
 
-            {/* Sélection Service */}
+            {/* ── Select Service ── */}
             <FormControl fullWidth size="small" required>
-              <InputLabel>
-                <Stack direction="row" alignItems="center" gap={0.5}>
-                  <MiscellaneousServices sx={{ fontSize: 16 }} /> Service
-                </Stack>
-              </InputLabel>
+              <InputLabel id="service-label">Service</InputLabel>
               <Select
+                labelId="service-label"
+                id="service-select"
                 value={serviceId}
-                onChange={(e) => setServiceId(e.target.value)}
                 label="Service"
+                onChange={(e) => setServiceId(e.target.value)}
+                MenuProps={{
+                  PaperProps: {
+                    sx: { maxHeight: 240, borderRadius: 2, mt: 0.5 },
+                  },
+                }}
               >
-                <MenuItem value="" disabled><em>Sélectionner un service</em></MenuItem>
-                {services.map((s) => (
-                  <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>
-                ))}
+                {services.length === 0 ? (
+                  <MenuItem disabled>Aucun service disponible</MenuItem>
+                ) : (
+                  services.map((s) => (
+                    <MenuItem key={s.id} value={s.id}>
+                      {s.name}
+                    </MenuItem>
+                  ))
+                )}
               </Select>
             </FormControl>
 
-            <Alert severity="info" icon={<Info />} sx={{ borderRadius: 2, fontSize: 12 }}>
-              Le rôle et le service sont <strong>obligatoires</strong> avant l'activation.
+            <Alert severity="info" icon={<Info fontSize="small" />} sx={{ borderRadius: 2, py: 0.5 }}>
+              <Typography variant="caption">
+                Rôle et service <strong>obligatoires</strong> avant activation.
+              </Typography>
             </Alert>
           </Stack>
         )}
@@ -197,7 +223,7 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
             disabled={!roleId || !serviceId}
             sx={{ borderRadius: 2 }}
           >
-            Activer
+            Activer le compte
           </Button>
         </DialogActions>
       )}
@@ -205,18 +231,21 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
   );
 }
 
-/* ─── Pending Users Table ─────────────────────────────────────── */
+/* ─── Section Utilisateurs en attente ────────────────────────── */
 function PendingUsersSection({ roles, services, onActivated }) {
-  const [users,   setUsers]   = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState(null);
+  const [users,      setUsers]      = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [selected,   setSelected]   = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const fetchPending = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get('/admin/users', { params: { pending: true, per_page: 50 } });
-      setUsers(res.data.data ?? res.data);
+      const res = await api.get('/admin/users', { params: { pending: 1, per_page: 50 } });
+      // Support pagination Laravel (data.data) ou tableau direct
+      setUsers(Array.isArray(res.data) ? res.data : (res.data.data ?? []));
+    } catch {
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -224,90 +253,100 @@ function PendingUsersSection({ roles, services, onActivated }) {
 
   useEffect(() => { fetchPending(); }, [fetchPending]);
 
-  const openDialog = (user) => {
-    setSelected(user);
-    setDialogOpen(true);
-  };
+  const openDialog = (user) => { setSelected(user); setDialogOpen(true); };
 
-  const handleSuccess = () => {
-    fetchPending();
-    onActivated();      // Rafraîchit aussi les KPI
-  };
+  const handleSuccess = () => { fetchPending(); onActivated(); };
 
   return (
     <Box>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
+      {/* En-tête section */}
+      <Stack direction="row" alignItems="flex-start" justifyContent="space-between" mb={2.5}>
         <Box>
-          <Typography variant="h6" fontWeight={700}>
+          <Typography variant="h6" fontWeight={700} fontSize={16}>
             Comptes en attente d'activation
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            Utilisateurs ayant vérifié leur email mais non encore activés
+            Utilisateurs ayant vérifié leur email, non encore activés
           </Typography>
         </Box>
         <Tooltip title="Rafraîchir">
-          <IconButton onClick={fetchPending} size="small">
+          <IconButton onClick={fetchPending} size="small" sx={{ mt: 0.5 }}>
             <Refresh fontSize="small" />
           </IconButton>
         </Tooltip>
       </Stack>
 
-      {loading ? (
+      {/* ── Squelette chargement ── */}
+      {loading && (
         <Stack spacing={1}>
           {[1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" height={52} />)}
         </Stack>
-      ) : users.length === 0 ? (
-        <Paper variant="outlined" sx={{ p: 4, textAlign: 'center', borderRadius: 3, borderStyle: 'dashed' }}>
-          <CheckCircle sx={{ fontSize: 40, color: 'success.light', mb: 1 }} />
-          <Typography color="text.secondary">Aucun compte en attente d'activation.</Typography>
+      )}
+
+      {/* ── Vide ── */}
+      {!loading && users.length === 0 && (
+        <Paper
+          variant="outlined"
+          sx={{ p: 4, textAlign: 'center', borderRadius: 2, borderStyle: 'dashed', borderColor: 'grey.300' }}
+        >
+          <CheckCircle sx={{ fontSize: 38, color: 'success.light', mb: 0.5 }} />
+          <Typography variant="body2" color="text.secondary">
+            Aucun compte en attente d'activation.
+          </Typography>
         </Paper>
-      ) : (
-        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3, overflow: 'hidden' }}>
+      )}
+
+      {/* ── Tableau ── */}
+      {!loading && users.length > 0 && (
+        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: 'grey.50' }}>
-                <TableCell sx={{ fontWeight: 700 }}>Utilisateur</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Matricule</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Rôle</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Service</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Statut email</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 700 }}>Action</TableCell>
+                {['Utilisateur', 'Matricule', 'Email', 'Rôle', 'Service', 'Email statut', 'Action'].map((h) => (
+                  <TableCell key={h} sx={{ fontWeight: 700, fontSize: 12, py: 1.5, color: 'text.secondary' }}>
+                    {h}
+                  </TableCell>
+                ))}
               </TableRow>
             </TableHead>
+
             <TableBody>
-              {users.map((user, idx) => (
-                <TableRow
-                  key={user.id}
-                  hover
-                  sx={{ '&:last-child td': { border: 0 }, bgcolor: idx % 2 === 0 ? 'white' : 'grey.50' }}
-                >
+              {users.map((user) => (
+                <TableRow key={user.id} hover sx={{ '&:last-child td': { border: 0 } }}>
+
                   <TableCell>
                     <Stack direction="row" alignItems="center" gap={1}>
                       <UserAvatar nom={user.nom} prenom={user.prenom} />
-                      <Typography variant="body2" fontWeight={600}>
+                      <Typography variant="body2" fontWeight={600} fontSize={13}>
                         {user.prenom} {user.nom}
                       </Typography>
                     </Stack>
                   </TableCell>
+
                   <TableCell>
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+                    <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'text.secondary', fontSize: 12 }}>
                       {user.matricule ?? '—'}
                     </Typography>
                   </TableCell>
+
                   <TableCell>
-                    <Typography variant="body2">{user.email}</Typography>
+                    <Typography variant="body2" fontSize={13}>{user.email}</Typography>
                   </TableCell>
+
                   <TableCell>
                     {user.role
                       ? <Chip label={user.role.name} size="small" color="primary" variant="outlined" />
-                      : <Chip label="Non attribué" size="small" color="warning" variant="outlined" />}
+                      : <Chip label="Non attribué" size="small" sx={{ color: 'warning.main', borderColor: 'warning.main' }} variant="outlined" />
+                    }
                   </TableCell>
+
                   <TableCell>
                     {user.service
                       ? <Chip label={user.service.name} size="small" color="secondary" variant="outlined" />
-                      : <Chip label="Non attribué" size="small" color="warning" variant="outlined" />}
+                      : <Chip label="Non attribué" size="small" sx={{ color: 'warning.main', borderColor: 'warning.main' }} variant="outlined" />
+                    }
                   </TableCell>
+
                   <TableCell>
                     <Chip
                       label={user.email_verified_at ? 'Vérifié' : 'Non vérifié'}
@@ -315,27 +354,32 @@ function PendingUsersSection({ roles, services, onActivated }) {
                       color={user.email_verified_at ? 'success' : 'error'}
                     />
                   </TableCell>
-                  <TableCell align="center">
-                    <Tooltip title="Attribuer rôle / service et activer">
+
+                  <TableCell>
+                    <Tooltip title={!user.email_verified_at ? 'Email non vérifié' : 'Attribuer et activer'}>
                       <span>
-                        <IconButton
+                        <Button
                           size="small"
-                          color="primary"
-                          onClick={() => openDialog(user)}
+                          variant="contained"
+                          startIcon={<CheckCircle sx={{ fontSize: '15px !important' }} />}
                           disabled={!user.email_verified_at}
+                          onClick={() => openDialog(user)}
                           sx={{
-                            bgcolor: 'primary.main', color: 'white',
-                            borderRadius: 1.5, px: 1.5,
-                            '&:hover': { bgcolor: 'primary.dark' },
-                            '&.Mui-disabled': { bgcolor: 'action.disabledBackground' },
+                            fontSize: 12,
+                            px: 1.5, py: 0.5,
+                            borderRadius: 1.5,
+                            textTransform: 'none',
+                            minWidth: 0,
+                            boxShadow: 'none',
+                            '&:hover': { boxShadow: 'none' },
                           }}
                         >
-                          <CheckCircle sx={{ fontSize: 18, mr: 0.5 }} />
-                          <Typography variant="caption" fontWeight={700}>Activer</Typography>
-                        </IconButton>
+                          Activer
+                        </Button>
                       </span>
                     </Tooltip>
                   </TableCell>
+
                 </TableRow>
               ))}
             </TableBody>
@@ -374,23 +418,23 @@ export default function DashboardPage() {
       api.get('/admin/services'),
     ]).then(([kpiRes, rolesRes, servicesRes]) => {
       setKpi(kpiRes.data);
-      setRoles(rolesRes.data?.data ?? rolesRes.data);
-      setServices(servicesRes.data?.data ?? servicesRes.data);
+      setRoles(Array.isArray(rolesRes.data) ? rolesRes.data : (rolesRes.data.data ?? []));
+      setServices(Array.isArray(servicesRes.data) ? servicesRes.data : (servicesRes.data.data ?? []));
     }).finally(() => setLoading(false));
   }, []);
 
   if (loading) {
     return (
       <Box>
-        <Skeleton variant="text" width={220} height={45} sx={{ mb: 3 }} />
+        <Skeleton variant="text" width={220} height={44} sx={{ mb: 3 }} />
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {[1, 2, 3, 4].map((i) => (
             <Grid item xs={12} sm={6} md={3} key={i}>
-              <Skeleton variant="rounded" height={90} />
+              <Skeleton variant="rounded" height={88} />
             </Grid>
           ))}
         </Grid>
-        <Skeleton variant="rounded" height={300} />
+        <Skeleton variant="rounded" height={280} />
       </Box>
     );
   }
@@ -403,52 +447,48 @@ export default function DashboardPage() {
 
       {/* ── KPI Cards ── */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        {KPI_CONFIG.map((kpi_item) => {
-          const Icon = kpi_item.icon;
-          const value = kpi?.[kpi_item.key] ?? 0;
-          const isPending = kpi_item.key === 'users_pending_activation';
+        {KPI_CONFIG.map((item) => {
+          const Icon  = item.icon;
+          const value = kpi?.[item.key] ?? 0;
+          const isPending = item.key === 'users_pending_activation' && value > 0;
           return (
-            <Grid item xs={12} sm={6} md={3} key={kpi_item.key}>
+            <Grid item xs={12} sm={6} md={3} key={item.key}>
               <Card
                 variant="outlined"
                 sx={{
                   borderRadius: 3,
-                  borderColor: isPending && value > 0 ? '#e6510040' : 'divider',
-                  boxShadow: isPending && value > 0 ? '0 0 0 2px #e6510020' : 'none',
-                  transition: 'box-shadow 0.2s',
+                  borderColor: isPending ? `${item.color}60` : 'divider',
+                  transition: 'border-color 0.3s',
                 }}
               >
-                <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 2.5 }}>
+                <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 2.5, '&:last-child': { pb: 2.5 } }}>
                   <Box
                     sx={{
-                      width: 52, height: 52, borderRadius: 2,
-                      bgcolor: kpi_item.color + '15', color: kpi_item.color,
+                      width: 52, height: 52, borderRadius: 2, flexShrink: 0,
+                      bgcolor: item.color + '18', color: item.color,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0,
                     }}
                   >
                     <Icon sx={{ fontSize: 28 }} />
                   </Box>
                   <Box>
-                    <Typography variant="h4" fontWeight={700} lineHeight={1}>
+                    <Typography variant="h4" fontWeight={700} lineHeight={1.1}>
                       {value}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">{kpi_item.label}</Typography>
+                    <Typography variant="body2" color="text.secondary">{item.label}</Typography>
                   </Box>
-                  {isPending && value > 0 && (
-                    <Box sx={{ ml: 'auto' }}>
-                      <Box
-                        sx={{
-                          width: 10, height: 10, borderRadius: '50%',
-                          bgcolor: '#e65100',
-                          animation: 'pulse 1.5s infinite',
-                          '@keyframes pulse': {
-                            '0%, 100%': { opacity: 1, transform: 'scale(1)' },
-                            '50%': { opacity: 0.4, transform: 'scale(1.4)' },
-                          },
-                        }}
-                      />
-                    </Box>
+                  {isPending && (
+                    <Box
+                      sx={{
+                        ml: 'auto', width: 10, height: 10, borderRadius: '50%',
+                        bgcolor: item.color,
+                        animation: 'blink 1.6s ease-in-out infinite',
+                        '@keyframes blink': {
+                          '0%, 100%': { opacity: 1 },
+                          '50%': { opacity: 0.2 },
+                        },
+                      }}
+                    />
                   )}
                 </CardContent>
               </Card>
@@ -457,14 +497,10 @@ export default function DashboardPage() {
         })}
       </Grid>
 
-      {/* ── Pending Users ── */}
+      {/* ── Section en attente ── */}
       <Card variant="outlined" sx={{ borderRadius: 3 }}>
-        <CardContent sx={{ p: 3 }}>
-          <PendingUsersSection
-            roles={roles}
-            services={services}
-            onActivated={fetchKpi}
-          />
+        <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
+          <PendingUsersSection roles={roles} services={services} onActivated={fetchKpi} />
         </CardContent>
       </Card>
     </Box>
