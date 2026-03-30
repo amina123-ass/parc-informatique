@@ -116,7 +116,7 @@ export default function AdminLayout() {
             </Box>
             <Box>
               <Typography variant="h6" sx={{ color: '#1976d2', fontWeight: 'bold' }}>
-                Parc Info
+                E-Matériel 
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 Administration SI
