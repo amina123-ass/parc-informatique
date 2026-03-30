@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\{RegisterRequest, VerifySetupRequest, LoginRequest};
-use App\Models\{User, EmailVerificationToken, PasswordResetTokenCustom, SecurityQuestion};
+use App\Models\{User, EmailVerificationToken, PasswordResetTokenCustom, SecurityQuestion, SecurityQuestionOption};
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,6 +13,18 @@ use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
+    // ─────────────────────────────────────────────────
+    // 0) GET SECURITY QUESTION OPTIONS (liste prédéfinie)
+    // ─────────────────────────────────────────────────
+    public function getSecurityQuestions(): JsonResponse
+    {
+        $questions = SecurityQuestionOption::active()
+            ->orderBy('id')
+            ->get(['id', 'question']);
+
+        return response()->json(['questions' => $questions]);
+    }
+
     // ─────────────────────────────────────────────────
     // 1) REGISTER (sans mot de passe)
     // ─────────────────────────────────────────────────
@@ -26,7 +38,6 @@ class AuthController extends Controller
             'fonction'  => $request->fonction,
         ]);
 
-        // Génération token vérification
         $plainToken = Str::random(64);
 
         EmailVerificationToken::create([
@@ -36,7 +47,6 @@ class AuthController extends Controller
             'created_at' => now(),
         ]);
 
-        // Envoi email
         $verifyUrl = config('app.frontend_url') . '/verify-setup?token=' . $plainToken;
 
         Mail::raw(
@@ -73,6 +83,20 @@ class AuthController extends Controller
             return response()->json(['message' => 'Email déjà vérifié.'], 422);
         }
 
+        // Vérifier que les 3 questions sont distinctes
+        $questionIds = collect($request->questions)->pluck('question_id');
+        if ($questionIds->unique()->count() !== 3) {
+            return response()->json(['message' => 'Les 3 questions de sécurité doivent être différentes.'], 422);
+        }
+
+        // Vérifier que les question_id existent dans la table options
+        $validIds = SecurityQuestionOption::active()->pluck('id');
+        foreach ($questionIds as $qId) {
+            if (!$validIds->contains($qId)) {
+                return response()->json(['message' => 'Question de sécurité invalide.'], 422);
+            }
+        }
+
         DB::transaction(function () use ($user, $request, $record) {
             $user->update([
                 'email_verified_at' => now(),
@@ -80,9 +104,11 @@ class AuthController extends Controller
             ]);
 
             foreach ($request->questions as $q) {
+                $option = SecurityQuestionOption::find($q['question_id']);
+
                 SecurityQuestion::create([
                     'user_id'     => $user->id,
-                    'question'    => $q['question'],
+                    'question'    => $option->question,     // on stocke le texte pour historique
                     'answer_hash' => Hash::make(Str::lower(trim($q['answer']))),
                 ]);
             }
@@ -102,7 +128,6 @@ class AuthController extends Controller
     // ─────────────────────────────────────────────────
     public function login(LoginRequest $request): JsonResponse
     {
-        // Rate limiting
         $key = 'login:' . $request->ip();
         if (RateLimiter::tooManyAttempts($key, 5)) {
             $seconds = RateLimiter::availableIn($key);
@@ -209,14 +234,12 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        // Réponse générique (anti-enumeration)
         if (!$user || !$user->email_verified_at) {
             return response()->json([
                 'message' => 'Si l\'adresse existe, un email de réinitialisation a été envoyé.',
             ]);
         }
 
-        // Supprimer anciens tokens
         PasswordResetTokenCustom::where('user_id', $user->id)->delete();
 
         $plainToken = Str::random(64);
@@ -270,7 +293,7 @@ class AuthController extends Controller
     }
 
     // ─────────────────────────────────────────────────
-    // 9) FORGOT PASSWORD - SECURITY QUESTIONS (get questions)
+    // 9) FORGOT PASSWORD - SECURITY QUESTIONS (get user questions)
     // ─────────────────────────────────────────────────
     public function forgotBySecurity(Request $request): JsonResponse
     {
@@ -318,7 +341,6 @@ class AuthController extends Controller
             return response()->json(['message' => 'Erreur de vérification.'], 422);
         }
 
-        // Vérifier les 3 réponses
         foreach ($request->answers as $a) {
             $sq = SecurityQuestion::where('id', $a['id'])
                 ->where('user_id', $user->id)
