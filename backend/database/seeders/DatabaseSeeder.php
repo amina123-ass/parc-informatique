@@ -23,8 +23,12 @@ class DatabaseSeeder extends Seeder
 
             // 3. Services (FK: type_connexion_id, entite_id, commune_id, structure_id)
             ServiceSeeder::class,
-            SousCategorieAttributesSeeder :: class,
-            // 4. Admin SI (FK: role_id, service_id)
+            SousCategorieAttributesSeeder::class,
+
+            // 4. Questions de sécurité prédéfinies
+            SecurityQuestionOptionSeeder::class,
+
+            // 5. Admin SI (FK: role_id, service_id)
             AdminSISeeder::class,
         ]);
     }
