@@ -27,7 +27,13 @@ const KPI_CONFIG = [
 function UserAvatar({ nom, prenom }) {
   const initials = `${(prenom?.[0] ?? '').toUpperCase()}${(nom?.[0] ?? '').toUpperCase()}`;
   return (
-    <Avatar sx={{ width: 34, height: 34, fontSize: 12, fontWeight: 700, bgcolor: '#1565c020', color: '#1565c0' }}>
+    <Avatar
+      sx={{
+        width: 34, height: 34,
+        fontSize: 12, fontWeight: 700,
+        bgcolor: '#1565c018', color: '#1565c0',
+      }}
+    >
       {initials}
     </Avatar>
   );
@@ -51,21 +57,28 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
 
   const handleActivate = async () => {
     if (!roleId || !serviceId) {
-      setError('Veuillez attribuer un rôle et un service avant d\'activer.');
+      setError("Veuillez attribuer un rôle et un service avant d'activer.");
       return;
     }
     setStep('loading');
     setError('');
     try {
-      // ⚠️ Adapter les URLs selon tes routes Laravel (voir routes/api.php)
-      await api.patch(`/admin/users/${user.id}/assign-role`,    { role_id: roleId });
-      await api.patch(`/admin/users/${user.id}/assign-service`, { service_id: serviceId });
-      await api.patch(`/admin/users/${user.id}/activation`,     { account_active: true });
+      // ✅ URLs corrigées selon routes/api.php
+      if (String(roleId) !== String(user.role_id)) {
+        await api.patch(`/admin/users/${user.id}/role`, { role_id: roleId });
+      }
+      if (String(serviceId) !== String(user.service_id)) {
+        await api.patch(`/admin/users/${user.id}/service`, { service_id: serviceId });
+      }
+      await api.patch(`/admin/users/${user.id}/activation`, { account_active: true });
 
       setStep('success');
-      setTimeout(() => { onSuccess(); onClose(); }, 1200);
+      setTimeout(() => {
+        onSuccess();
+        onClose();
+      }, 1200);
     } catch (err) {
-      setError(err?.response?.data?.message ?? 'Erreur serveur. Vérifiez vos routes Laravel.');
+      setError(err?.response?.data?.message ?? 'Erreur serveur. Réessayez.');
       setStep('form');
     }
   };
@@ -80,11 +93,14 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
       fullWidth
       PaperProps={{ sx: { borderRadius: 3 } }}
     >
+      {/* ── Titre ── */}
       <DialogTitle sx={{ pb: 1 }}>
         <Stack direction="row" alignItems="center" gap={1.5}>
           <PersonAdd color="primary" />
           <Box>
-            <Typography fontWeight={700} fontSize={16}>Activer le compte</Typography>
+            <Typography fontWeight={700} fontSize={16}>
+              Activer le compte
+            </Typography>
             <Typography variant="caption" color="text.secondary">
               {user.prenom} {user.nom} · {user.matricule ?? user.email}
             </Typography>
@@ -94,9 +110,10 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
 
       <Divider />
 
+      {/* ── Contenu ── */}
       <DialogContent sx={{ pt: 2.5 }}>
 
-        {/* ── Chargement ── */}
+        {/* Chargement */}
         {step === 'loading' && (
           <Box sx={{ py: 4, textAlign: 'center' }}>
             <CircularProgress size={44} />
@@ -106,27 +123,34 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
           </Box>
         )}
 
-        {/* ── Succès ── */}
+        {/* Succès */}
         {step === 'success' && (
           <Box sx={{ py: 4, textAlign: 'center' }}>
             <CheckCircle sx={{ fontSize: 52, color: 'success.main' }} />
-            <Typography fontWeight={700} mt={1}>Compte activé !</Typography>
+            <Typography fontWeight={700} mt={1.5} fontSize={15}>
+              Compte activé avec succès !
+            </Typography>
           </Box>
         )}
 
-        {/* ── Formulaire ── */}
+        {/* Formulaire */}
         {step === 'form' && (
           <Stack spacing={2.5}>
+
+            {/* Erreur */}
             {error && (
               <Alert severity="error" sx={{ borderRadius: 2, fontSize: 13 }}>
                 {error}
               </Alert>
             )}
 
-            {/* Récapitulatif utilisateur */}
+            {/* Récap utilisateur */}
             <Paper
               variant="outlined"
-              sx={{ p: 1.5, borderRadius: 2, bgcolor: 'grey.50', borderColor: 'grey.200' }}
+              sx={{
+                p: 1.5, borderRadius: 2,
+                bgcolor: 'grey.50', borderColor: 'grey.200',
+              }}
             >
               <Stack direction="row" alignItems="center" gap={1.5}>
                 <UserAvatar nom={user.nom} prenom={user.prenom} />
@@ -148,12 +172,12 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
               </Stack>
             </Paper>
 
-            {/* ── Select Rôle ── */}
+            {/* Select Rôle */}
             <FormControl fullWidth size="small" required>
-              <InputLabel id="role-label">Rôle</InputLabel>
+              <InputLabel id="dlg-role-label">Rôle</InputLabel>
               <Select
-                labelId="role-label"
-                id="role-select"
+                labelId="dlg-role-label"
+                id="dlg-role-select"
                 value={roleId}
                 label="Rôle"
                 onChange={(e) => setRoleId(e.target.value)}
@@ -175,12 +199,12 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
               </Select>
             </FormControl>
 
-            {/* ── Select Service ── */}
+            {/* Select Service */}
             <FormControl fullWidth size="small" required>
-              <InputLabel id="service-label">Service</InputLabel>
+              <InputLabel id="dlg-service-label">Service</InputLabel>
               <Select
-                labelId="service-label"
-                id="service-select"
+                labelId="dlg-service-label"
+                id="dlg-service-select"
                 value={serviceId}
                 label="Service"
                 onChange={(e) => setServiceId(e.target.value)}
@@ -202,18 +226,30 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
               </Select>
             </FormControl>
 
-            <Alert severity="info" icon={<Info fontSize="small" />} sx={{ borderRadius: 2, py: 0.5 }}>
+            {/* Info */}
+            <Alert
+              severity="info"
+              icon={<Info fontSize="small" />}
+              sx={{ borderRadius: 2, py: 0.5 }}
+            >
               <Typography variant="caption">
                 Rôle et service <strong>obligatoires</strong> avant activation.
               </Typography>
             </Alert>
+
           </Stack>
         )}
       </DialogContent>
 
+      {/* ── Actions ── */}
       {step === 'form' && (
         <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-          <Button onClick={onClose} variant="outlined" color="inherit" sx={{ borderRadius: 2 }}>
+          <Button
+            onClick={onClose}
+            variant="outlined"
+            color="inherit"
+            sx={{ borderRadius: 2 }}
+          >
             Annuler
           </Button>
           <Button
@@ -231,7 +267,7 @@ function ActivationDialog({ open, user, roles, services, onClose, onSuccess }) {
   );
 }
 
-/* ─── Section Utilisateurs en attente ────────────────────────── */
+/* ─── Section utilisateurs en attente ────────────────────────── */
 function PendingUsersSection({ roles, services, onActivated }) {
   const [users,      setUsers]      = useState([]);
   const [loading,    setLoading]    = useState(true);
@@ -241,9 +277,11 @@ function PendingUsersSection({ roles, services, onActivated }) {
   const fetchPending = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get('/admin/users', { params: { pending: 1, per_page: 50 } });
-      // Support pagination Laravel (data.data) ou tableau direct
-      setUsers(Array.isArray(res.data) ? res.data : (res.data.data ?? []));
+      const res = await api.get('/admin/users', {
+        params: { pending: 1, per_page: 50 },
+      });
+      const raw = res.data;
+      setUsers(Array.isArray(raw) ? raw : (raw?.data ?? []));
     } catch {
       setUsers([]);
     } finally {
@@ -253,14 +291,25 @@ function PendingUsersSection({ roles, services, onActivated }) {
 
   useEffect(() => { fetchPending(); }, [fetchPending]);
 
-  const openDialog = (user) => { setSelected(user); setDialogOpen(true); };
+  const openDialog = (user) => {
+    setSelected(user);
+    setDialogOpen(true);
+  };
 
-  const handleSuccess = () => { fetchPending(); onActivated(); };
+  const handleSuccess = () => {
+    fetchPending();
+    onActivated(); // rafraîchit les KPI
+  };
 
   return (
     <Box>
-      {/* En-tête section */}
-      <Stack direction="row" alignItems="flex-start" justifyContent="space-between" mb={2.5}>
+      {/* En-tête */}
+      <Stack
+        direction="row"
+        alignItems="flex-start"
+        justifyContent="space-between"
+        mb={2.5}
+      >
         <Box>
           <Typography variant="h6" fontWeight={700} fontSize={16}>
             Comptes en attente d'activation
@@ -276,18 +325,23 @@ function PendingUsersSection({ roles, services, onActivated }) {
         </Tooltip>
       </Stack>
 
-      {/* ── Squelette chargement ── */}
+      {/* Skeletons chargement */}
       {loading && (
         <Stack spacing={1}>
-          {[1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" height={52} />)}
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} variant="rounded" height={52} />
+          ))}
         </Stack>
       )}
 
-      {/* ── Vide ── */}
+      {/* Vide */}
       {!loading && users.length === 0 && (
         <Paper
           variant="outlined"
-          sx={{ p: 4, textAlign: 'center', borderRadius: 2, borderStyle: 'dashed', borderColor: 'grey.300' }}
+          sx={{
+            p: 4, textAlign: 'center',
+            borderRadius: 2, borderStyle: 'dashed', borderColor: 'grey.300',
+          }}
         >
           <CheckCircle sx={{ fontSize: 38, color: 'success.light', mb: 0.5 }} />
           <Typography variant="body2" color="text.secondary">
@@ -296,14 +350,21 @@ function PendingUsersSection({ roles, services, onActivated }) {
         </Paper>
       )}
 
-      {/* ── Tableau ── */}
+      {/* Tableau */}
       {!loading && users.length > 0 && (
-        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+        <TableContainer
+          component={Paper}
+          variant="outlined"
+          sx={{ borderRadius: 2 }}
+        >
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: 'grey.50' }}>
                 {['Utilisateur', 'Matricule', 'Email', 'Rôle', 'Service', 'Email statut', 'Action'].map((h) => (
-                  <TableCell key={h} sx={{ fontWeight: 700, fontSize: 12, py: 1.5, color: 'text.secondary' }}>
+                  <TableCell
+                    key={h}
+                    sx={{ fontWeight: 700, fontSize: 12, py: 1.5, color: 'text.secondary' }}
+                  >
                     {h}
                   </TableCell>
                 ))}
@@ -311,9 +372,16 @@ function PendingUsersSection({ roles, services, onActivated }) {
             </TableHead>
 
             <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id} hover sx={{ '&:last-child td': { border: 0 } }}>
-
+              {users.map((user, idx) => (
+                <TableRow
+                  key={user.id}
+                  hover
+                  sx={{
+                    '&:last-child td': { border: 0 },
+                    bgcolor: idx % 2 === 0 ? 'white' : 'grey.50',
+                  }}
+                >
+                  {/* Nom */}
                   <TableCell>
                     <Stack direction="row" alignItems="center" gap={1}>
                       <UserAvatar nom={user.nom} prenom={user.prenom} />
@@ -323,30 +391,62 @@ function PendingUsersSection({ roles, services, onActivated }) {
                     </Stack>
                   </TableCell>
 
+                  {/* Matricule */}
                   <TableCell>
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'text.secondary', fontSize: 12 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontFamily: 'monospace', color: 'text.secondary', fontSize: 12 }}
+                    >
                       {user.matricule ?? '—'}
                     </Typography>
                   </TableCell>
 
+                  {/* Email */}
                   <TableCell>
-                    <Typography variant="body2" fontSize={13}>{user.email}</Typography>
+                    <Typography variant="body2" fontSize={13}>
+                      {user.email}
+                    </Typography>
                   </TableCell>
 
+                  {/* Rôle */}
                   <TableCell>
-                    {user.role
-                      ? <Chip label={user.role.name} size="small" color="primary" variant="outlined" />
-                      : <Chip label="Non attribué" size="small" sx={{ color: 'warning.main', borderColor: 'warning.main' }} variant="outlined" />
-                    }
+                    {user.role ? (
+                      <Chip
+                        label={user.role.name}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
+                    ) : (
+                      <Chip
+                        label="Non attribué"
+                        size="small"
+                        variant="outlined"
+                        sx={{ color: 'warning.dark', borderColor: 'warning.main' }}
+                      />
+                    )}
                   </TableCell>
 
+                  {/* Service */}
                   <TableCell>
-                    {user.service
-                      ? <Chip label={user.service.name} size="small" color="secondary" variant="outlined" />
-                      : <Chip label="Non attribué" size="small" sx={{ color: 'warning.main', borderColor: 'warning.main' }} variant="outlined" />
-                    }
+                    {user.service ? (
+                      <Chip
+                        label={user.service.name}
+                        size="small"
+                        color="secondary"
+                        variant="outlined"
+                      />
+                    ) : (
+                      <Chip
+                        label="Non attribué"
+                        size="small"
+                        variant="outlined"
+                        sx={{ color: 'warning.dark', borderColor: 'warning.main' }}
+                      />
+                    )}
                   </TableCell>
 
+                  {/* Statut email */}
                   <TableCell>
                     <Chip
                       label={user.email_verified_at ? 'Vérifié' : 'Non vérifié'}
@@ -355,8 +455,15 @@ function PendingUsersSection({ roles, services, onActivated }) {
                     />
                   </TableCell>
 
+                  {/* Action */}
                   <TableCell>
-                    <Tooltip title={!user.email_verified_at ? 'Email non vérifié' : 'Attribuer et activer'}>
+                    <Tooltip
+                      title={
+                        !user.email_verified_at
+                          ? 'Email non vérifié — activation impossible'
+                          : 'Attribuer rôle / service et activer'
+                      }
+                    >
                       <span>
                         <Button
                           size="small"
@@ -369,7 +476,6 @@ function PendingUsersSection({ roles, services, onActivated }) {
                             px: 1.5, py: 0.5,
                             borderRadius: 1.5,
                             textTransform: 'none',
-                            minWidth: 0,
                             boxShadow: 'none',
                             '&:hover': { boxShadow: 'none' },
                           }}
@@ -379,7 +485,6 @@ function PendingUsersSection({ roles, services, onActivated }) {
                       </span>
                     </Tooltip>
                   </TableCell>
-
                 </TableRow>
               ))}
             </TableBody>
@@ -387,6 +492,7 @@ function PendingUsersSection({ roles, services, onActivated }) {
         </TableContainer>
       )}
 
+      {/* Dialog */}
       <ActivationDialog
         open={dialogOpen}
         user={selected}
@@ -407,8 +513,10 @@ export default function DashboardPage() {
   const [loading,  setLoading]  = useState(true);
 
   const fetchKpi = useCallback(async () => {
-    const res = await api.get('/admin/dashboard');
-    setKpi(res.data);
+    try {
+      const res = await api.get('/admin/dashboard');
+      setKpi(res.data);
+    } catch { /* silencieux */ }
   }, []);
 
   useEffect(() => {
@@ -416,13 +524,17 @@ export default function DashboardPage() {
       api.get('/admin/dashboard'),
       api.get('/admin/roles'),
       api.get('/admin/services'),
-    ]).then(([kpiRes, rolesRes, servicesRes]) => {
-      setKpi(kpiRes.data);
-      setRoles(Array.isArray(rolesRes.data) ? rolesRes.data : (rolesRes.data.data ?? []));
-      setServices(Array.isArray(servicesRes.data) ? servicesRes.data : (servicesRes.data.data ?? []));
-    }).finally(() => setLoading(false));
+    ])
+      .then(([kpiRes, rolesRes, servicesRes]) => {
+        setKpi(kpiRes.data);
+        const toArr = (d) => (Array.isArray(d) ? d : (d?.data ?? []));
+        setRoles(toArr(rolesRes.data));
+        setServices(toArr(servicesRes.data));
+      })
+      .finally(() => setLoading(false));
   }, []);
 
+  /* ── Squelette initial ── */
   if (loading) {
     return (
       <Box>
@@ -430,11 +542,11 @@ export default function DashboardPage() {
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {[1, 2, 3, 4].map((i) => (
             <Grid item xs={12} sm={6} md={3} key={i}>
-              <Skeleton variant="rounded" height={88} />
+              <Skeleton variant="rounded" height={90} />
             </Grid>
           ))}
         </Grid>
-        <Skeleton variant="rounded" height={280} />
+        <Skeleton variant="rounded" height={300} />
       </Box>
     );
   }
@@ -448,20 +560,26 @@ export default function DashboardPage() {
       {/* ── KPI Cards ── */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {KPI_CONFIG.map((item) => {
-          const Icon  = item.icon;
-          const value = kpi?.[item.key] ?? 0;
-          const isPending = item.key === 'users_pending_activation' && value > 0;
+          const Icon     = item.icon;
+          const value    = kpi?.[item.key] ?? 0;
+          const isPulse  = item.key === 'users_pending_activation' && value > 0;
+
           return (
             <Grid item xs={12} sm={6} md={3} key={item.key}>
               <Card
                 variant="outlined"
                 sx={{
                   borderRadius: 3,
-                  borderColor: isPending ? `${item.color}60` : 'divider',
+                  borderColor: isPulse ? `${item.color}55` : 'divider',
                   transition: 'border-color 0.3s',
                 }}
               >
-                <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 2.5, '&:last-child': { pb: 2.5 } }}>
+                <CardContent
+                  sx={{
+                    display: 'flex', alignItems: 'center', gap: 2,
+                    py: 2.5, '&:last-child': { pb: 2.5 },
+                  }}
+                >
                   <Box
                     sx={{
                       width: 52, height: 52, borderRadius: 2, flexShrink: 0,
@@ -471,21 +589,27 @@ export default function DashboardPage() {
                   >
                     <Icon sx={{ fontSize: 28 }} />
                   </Box>
+
                   <Box>
                     <Typography variant="h4" fontWeight={700} lineHeight={1.1}>
                       {value}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">{item.label}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {item.label}
+                    </Typography>
                   </Box>
-                  {isPending && (
+
+                  {/* Point clignotant si en attente */}
+                  {isPulse && (
                     <Box
                       sx={{
-                        ml: 'auto', width: 10, height: 10, borderRadius: '50%',
+                        ml: 'auto',
+                        width: 10, height: 10, borderRadius: '50%',
                         bgcolor: item.color,
                         animation: 'blink 1.6s ease-in-out infinite',
                         '@keyframes blink': {
                           '0%, 100%': { opacity: 1 },
-                          '50%': { opacity: 0.2 },
+                          '50%':      { opacity: 0.15 },
                         },
                       }}
                     />
@@ -500,7 +624,11 @@ export default function DashboardPage() {
       {/* ── Section en attente ── */}
       <Card variant="outlined" sx={{ borderRadius: 3 }}>
         <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
-          <PendingUsersSection roles={roles} services={services} onActivated={fetchKpi} />
+          <PendingUsersSection
+            roles={roles}
+            services={services}
+            onActivated={fetchKpi}
+          />
         </CardContent>
       </Card>
     </Box>
